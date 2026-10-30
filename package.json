@@ -52,5 +52,9 @@
     "tailwindcss": "^4",
     "tsx": "^4.19.3",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "@esbuild/linux-musl-x64": "^0.28.0",
+    "@esbuild/linux-x64": "^0.28.0"
   }
 }

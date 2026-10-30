@@ -48,6 +48,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: atendia-worker
+    user: root
     restart: always
     command: npm run start:worker
     environment:
