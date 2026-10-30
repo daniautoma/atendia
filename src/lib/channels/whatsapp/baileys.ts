@@ -16,7 +16,7 @@ import path from 'path';
 import fs from 'fs';
 import QRCode from 'qrcode';
 
-// Gestor de instancia Baileys viva en el proceso Node (Worker o API)
+// Gestor de instancia Baileys viva EXCLUSIVAMENTE en el proceso Worker
 let baileysSocket: any = null;
 let currentQrDataUrl: string | null = null;
 let currentStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
@@ -62,12 +62,10 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
   }
 
   async connect(forceFresh = false): Promise<void> {
-    // Si ya está conectado y no se forzó reinicio, no hacer nada
     if (baileysSocket && currentStatus === ConnectionStatus.CONNECTED && !forceFresh) {
       return;
     }
 
-    // Evitar llamadas concurrentes mientras se conecta
     if (isConnecting && !forceFresh) {
       return;
     }
@@ -75,8 +73,16 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     isConnecting = true;
 
     if (forceFresh) {
-      await this.disconnect();
+      if (baileysSocket) {
+        try {
+          baileysSocket.end();
+        } catch {}
+        baileysSocket = null;
+      }
       this.cleanSessionFolder();
+      currentQrDataUrl = null;
+      currentStatus = ConnectionStatus.WAITING_QR;
+      await this.persistStatus();
     }
 
     const sessionDir = this.getSessionDir();
@@ -85,8 +91,12 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     }
 
     try {
-      if (baileysSocket && forceFresh) {
+      // Siempre cerrar y limpiar cualquier socket previo antes de crear uno nuevo
+      if (baileysSocket) {
         try {
+          baileysSocket.ev.removeAllListeners('connection.update');
+          baileysSocket.ev.removeAllListeners('creds.update');
+          baileysSocket.ev.removeAllListeners('messages.upsert');
           baileysSocket.end();
         } catch {}
         baileysSocket = null;
@@ -99,15 +109,16 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
 
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-      currentStatus = ConnectionStatus.CONNECTING;
-      await this.persistStatus();
+      if (currentStatus !== ConnectionStatus.WAITING_QR) {
+        currentStatus = ConnectionStatus.CONNECTING;
+        await this.persistStatus();
+      }
 
-      // Usar perfil oficial reconocido por WhatsApp Business
       baileysSocket = makeWASocket({
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.appropriate('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
       });
@@ -118,11 +129,11 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          // Generar código QR como Data URL PNG para mostrarlo grande en el panel
+          // Generar código QR PNG y persistirlo en PostgreSQL
           currentQrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
           currentStatus = ConnectionStatus.WAITING_QR;
           await this.persistStatus();
-          console.log('[Baileys] Código QR listo para escanear.');
+          console.log('[Baileys] Código QR generado y guardado en BD.');
         }
 
         if (connection === 'close') {
@@ -132,30 +143,28 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
 
           console.log(`[Baileys] Conexión cerrada (status ${statusCode}, registrado: ${isRegistered}).`);
 
-          currentQrDataUrl = null;
-
-          if (statusCode === DisconnectReason.loggedOut || (statusCode === 428 && !isRegistered)) {
-            console.log('[Baileys] Sesión expirada o desvinculada. Limpiando para nuevo intento limpio...');
+          if (statusCode === DisconnectReason.loggedOut) {
+            console.log('[Baileys] Sesión desvinculada por el usuario (loggedOut).');
             currentStatus = ConnectionStatus.DISCONNECTED;
+            currentQrDataUrl = null;
             connectedPhone = null;
-            await this.persistStatus();
             this.cleanSessionFolder();
-          } else if (shouldReconnect) {
-            currentStatus = ConnectionStatus.CONNECTING;
             await this.persistStatus();
-            console.log('[Baileys] Reconectando sesión tras cierre temporal...');
+          } else {
+            // NO BORRAMOS currentQrDataUrl aquí para que el QR en pantalla sea estable
+            console.log('[Baileys] Reconectando sesión para mantener el socket activo...');
             setTimeout(() => {
               isConnecting = false;
               this.connect(false);
-            }, 2500);
+            }, 2000);
           }
         } else if (connection === 'open') {
           currentStatus = ConnectionStatus.CONNECTED;
-          currentQrDataUrl = null;
+          currentQrDataUrl = null; // Conexión abierta: ya no se necesita QR
           isConnecting = false;
           const userJid = baileysSocket?.user?.id || '';
           connectedPhone = userJid.split(':')[0] || userJid.split('@')[0];
-          console.log(`[Baileys] WhatsApp Conectado exitosamente con número: ${connectedPhone}`);
+          console.log(`[Baileys] ✅ WhatsApp CONECTADO con éxito: ${connectedPhone}`);
           await this.persistStatus();
         }
       });
@@ -251,7 +260,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
               },
             });
 
-            console.log(`[Baileys] Mensaje registrado en BD y encolado en WorkerJob (ID Conv: ${conv.id})`);
+            console.log(`[Baileys] Mensaje guardado en BD y encolado en WorkerJob (Conv ID: ${conv.id})`);
           } catch (e) {
             console.error('[Baileys] Error procesando mensaje entrante:', e);
           }
@@ -324,14 +333,21 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
   }
 
   private async persistStatus() {
+    const data: any = {
+      waProvider: WhatsAppProvider.BAILEYS,
+      waStatus: currentStatus,
+      waPhoneNumber: connectedPhone,
+    };
+
+    if (currentQrDataUrl) {
+      data.baileysQrCode = currentQrDataUrl;
+    } else if (currentStatus === ConnectionStatus.CONNECTED || currentStatus === ConnectionStatus.DISCONNECTED) {
+      data.baileysQrCode = null;
+    }
+
     await prisma.channelConfig.update({
       where: { type: 'WHATSAPP' },
-      data: {
-        waProvider: WhatsAppProvider.BAILEYS,
-        waStatus: currentStatus,
-        waPhoneNumber: connectedPhone,
-        baileysQrCode: currentQrDataUrl,
-      },
+      data,
     }).catch(() => {});
   }
 }

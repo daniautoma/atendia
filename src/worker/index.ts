@@ -360,11 +360,11 @@ async function handleDailySummaryJob() {
 async function runWorkerLoop() {
   console.log('✓ [Worker] Bucle de procesamiento de colas y debounce activado.');
 
-  // Inicializar adaptador de WhatsApp Baileys si está activo o en proceso de conexión
+  // Inicializar adaptador de WhatsApp Baileys si ya estaba previamente conectado
   try {
     const waConfig = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
-    if (waConfig?.waProvider === 'BAILEYS' && waConfig?.waStatus !== 'DISCONNECTED') {
-      console.log('📱 [Worker] Conectando Baileys WhatsApp en background...');
+    if (waConfig?.waProvider === 'BAILEYS' && waConfig?.waStatus === 'CONNECTED') {
+      console.log('📱 [Worker] Conectando sesión existente de Baileys WhatsApp en background...');
       const adapter = await getWhatsAppAdapter('BAILEYS');
       await adapter.connect(false);
     }
@@ -377,18 +377,18 @@ async function runWorkerLoop() {
     try {
       await processWorkerJobs();
 
-      // Cada 60 ticks (~90 segundos), revisar citas y resúmenes
+      // Cada 100 ticks (~60 segundos), revisar citas y resúmenes
       tickCount++;
-      if (tickCount >= 40) {
+      if (tickCount >= 100) {
         tickCount = 0;
         await checkUpcomingAppointments();
         await checkDailySummarySchedule();
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 600));
     } catch (err) {
       console.error('[Worker] Error en el bucle principal:', err);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 }

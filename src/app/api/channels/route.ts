@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
-import { getWhatsAppAdapter } from '@/lib/channels/whatsapp/factory';
 import { encrypt, maskSecret } from '@/lib/crypto';
 import { ConnectionStatus, WhatsAppProvider } from '@prisma/client';
 
@@ -14,16 +13,13 @@ export async function GET() {
       prisma.channelConfig.findUnique({ where: { type: 'WEB' } }),
     ]);
 
-    const adapter = await getWhatsAppAdapter(channelWa?.waProvider || WhatsAppProvider.BAILEYS);
-    const liveStatus = await adapter.getStatus();
-
     return NextResponse.json({
       whatsapp: {
         provider: channelWa?.waProvider || WhatsAppProvider.BAILEYS,
-        status: liveStatus.status,
-        phoneNumber: liveStatus.phoneNumber || channelWa?.waPhoneNumber,
-        businessName: liveStatus.businessName || channelWa?.waBusinessName,
-        qrCode: liveStatus.qrCode || channelWa?.baileysQrCode,
+        status: channelWa?.waStatus || 'DISCONNECTED',
+        phoneNumber: channelWa?.waPhoneNumber,
+        businessName: channelWa?.waBusinessName,
+        qrCode: channelWa?.baileysQrCode,
         wabaId: channelWa?.ycloudWabaId,
         phoneNumberId: channelWa?.ycloudPhoneNumberId,
         hasApiKey: !!channelWa?.ycloudApiKeyEnc,
@@ -76,26 +72,33 @@ export async function PUT(req: Request) {
         data: updateData,
       });
 
-      // Si se solicitó acción de conexión/desconexión o reinicio
-      if (wa.action === 'CONNECT') {
-        const adapter = await getWhatsAppAdapter(wa.provider);
-        await adapter.connect(false);
-        for (let i = 0; i < 8; i++) {
-          const st = await adapter.getStatus();
-          if (st.qrCode || st.status === ConnectionStatus.CONNECTED) break;
+      // Si se solicitó acción de conexión/desconexión o reinicio:
+      // Delegar la gestión del socket al Worker (único dueño de Baileys)
+      if (wa.action === 'CONNECT' || wa.action === 'RESET' || wa.action === 'DISCONNECT') {
+        // Eliminar trabajos anteriores pendientes de WhatsApp para no acumular
+        await prisma.workerJob.deleteMany({
+          where: {
+            type: { in: ['WHATSAPP_CONNECT', 'WHATSAPP_RESET', 'WHATSAPP_DISCONNECT'] },
+            status: 'PENDING',
+          },
+        }).catch(() => {});
+
+        // Crear trabajo para ejecución inmediata en el Worker
+        await prisma.workerJob.create({
+          data: {
+            type: `WHATSAPP_${wa.action}`,
+            payload: { provider: wa.provider },
+            scheduledFor: new Date(),
+          },
+        });
+
+        // Esperar brevemente (hasta 3.5s) a que el Worker genere el QR o cambie de estado
+        for (let i = 0; i < 18; i++) {
           await new Promise((r) => setTimeout(r, 200));
+          const updatedWa = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
+          if (wa.action === 'DISCONNECT' && updatedWa?.waStatus === 'DISCONNECTED') break;
+          if (updatedWa?.baileysQrCode || updatedWa?.waStatus === 'CONNECTED') break;
         }
-      } else if (wa.action === 'RESET') {
-        const adapter = await getWhatsAppAdapter(wa.provider);
-        await adapter.connect(true); // Fuerza desconexión, limpieza de sesión y nuevo QR
-        for (let i = 0; i < 10; i++) {
-          const st = await adapter.getStatus();
-          if (st.qrCode || st.status === ConnectionStatus.CONNECTED) break;
-          await new Promise((r) => setTimeout(r, 250));
-        }
-      } else if (wa.action === 'DISCONNECT') {
-        const adapter = await getWhatsAppAdapter(wa.provider);
-        await adapter.disconnect();
       }
     }
 
@@ -113,19 +116,17 @@ export async function PUT(req: Request) {
       });
     }
 
-    // Retornar estado actualizado en vivo
+    // Retornar estado actualizado desde la BD
     const currentWa = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
-    const adapter = await getWhatsAppAdapter(currentWa?.waProvider || WhatsAppProvider.BAILEYS);
-    const liveStatus = await adapter.getStatus();
 
     return NextResponse.json({
       success: true,
       whatsapp: {
         provider: currentWa?.waProvider || WhatsAppProvider.BAILEYS,
-        status: liveStatus.status,
-        phoneNumber: liveStatus.phoneNumber || currentWa?.waPhoneNumber,
-        businessName: liveStatus.businessName || currentWa?.waBusinessName,
-        qrCode: liveStatus.qrCode || currentWa?.baileysQrCode,
+        status: currentWa?.waStatus || 'DISCONNECTED',
+        phoneNumber: currentWa?.waPhoneNumber,
+        businessName: currentWa?.waBusinessName,
+        qrCode: currentWa?.baileysQrCode,
       },
     });
   } catch (error: any) {

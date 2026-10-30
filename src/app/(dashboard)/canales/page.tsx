@@ -63,7 +63,11 @@ export default function CanalesPage() {
         setWaStatus(data.whatsapp.status || 'DISCONNECTED');
         setWaPhone(data.whatsapp.phoneNumber || '');
         setWaBusinessName(data.whatsapp.businessName || '');
-        setQrCodeData(data.whatsapp.qrCode || null);
+        if (data.whatsapp.qrCode) {
+          setQrCodeData(data.whatsapp.qrCode);
+        } else if (data.whatsapp.status === 'CONNECTED') {
+          setQrCodeData(null);
+        }
         setYcloudWabaId(data.whatsapp.wabaId || '');
         setYcloudPhoneNumberId(data.whatsapp.phoneNumberId || '');
         setMaskedApiKey(data.whatsapp.maskedApiKey);
@@ -112,7 +116,11 @@ export default function CanalesPage() {
       const updated = await res.json();
       if (updated.whatsapp) {
         setWaStatus(updated.whatsapp.status || 'DISCONNECTED');
-        setQrCodeData(updated.whatsapp.qrCode || null);
+        if (updated.whatsapp.qrCode) {
+          setQrCodeData(updated.whatsapp.qrCode);
+        } else if (action === 'RESET' || action === 'DISCONNECT') {
+          setQrCodeData(null);
+        }
         if (updated.whatsapp.phoneNumber) setWaPhone(updated.whatsapp.phoneNumber);
       }
       setSuccessWa(true);
