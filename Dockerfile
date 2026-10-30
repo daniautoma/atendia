@@ -36,6 +36,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/scripts ./scripts
 
+RUN mkdir -p /app/whatsapp-session && chown -R nextjs:nodejs /app
+
 USER nextjs
 
 EXPOSE 3000
