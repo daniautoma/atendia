@@ -76,15 +76,22 @@ export async function PUT(req: Request) {
         data: updateData,
       });
 
-      // Si se solicitó acción de conexión/desconexión
+      // Si se solicitó acción de conexión/desconexión o reinicio
       if (wa.action === 'CONNECT') {
         const adapter = await getWhatsAppAdapter(wa.provider);
-        await adapter.connect();
-        // Esperar brevemente (hasta 1.5s) para que el QR esté disponible de inmediato
+        await adapter.connect(false);
         for (let i = 0; i < 8; i++) {
           const st = await adapter.getStatus();
           if (st.qrCode || st.status === ConnectionStatus.CONNECTED) break;
           await new Promise((r) => setTimeout(r, 200));
+        }
+      } else if (wa.action === 'RESET') {
+        const adapter = await getWhatsAppAdapter(wa.provider);
+        await adapter.connect(true); // Fuerza desconexión, limpieza de sesión y nuevo QR
+        for (let i = 0; i < 10; i++) {
+          const st = await adapter.getStatus();
+          if (st.qrCode || st.status === ConnectionStatus.CONNECTED) break;
+          await new Promise((r) => setTimeout(r, 250));
         }
       } else if (wa.action === 'DISCONNECT') {
         const adapter = await getWhatsAppAdapter(wa.provider);

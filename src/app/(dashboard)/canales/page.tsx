@@ -89,7 +89,7 @@ export default function CanalesPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSaveWhatsApp = async (action?: 'CONNECT' | 'DISCONNECT') => {
+  const handleSaveWhatsApp = async (action?: 'CONNECT' | 'DISCONNECT' | 'RESET') => {
     setSavingWa(true);
     setError(null);
     try {
@@ -334,16 +334,23 @@ export default function CanalesPage() {
                         {savingWa ? 'Generando QR...' : 'Generar / Refrescar Código QR'}
                       </button>
                       <button
-                        onClick={async () => {
-                          await handleSaveWhatsApp('DISCONNECT');
-                          setTimeout(() => handleSaveWhatsApp('CONNECT'), 400);
-                        }}
+                        onClick={() => handleSaveWhatsApp('RESET')}
                         disabled={savingWa}
                         className="px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium cursor-pointer border border-stone-200"
                         title="Elimina cualquier intento previo y fuerza un QR nuevo desde cero"
                       >
                         Reiniciar desde cero
                       </button>
+                    </div>
+
+                    <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 space-y-1">
+                      <p className="font-bold flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        ¿WhatsApp dice que ya tienes muchos dispositivos vinculados?
+                      </p>
+                      <p>
+                        WhatsApp limita a 4 los dispositivos simultáneos. En tu móvil, ve a <b>Ajustes &gt; Dispositivos vinculados</b>, toca los dispositivos viejos o inactivos y pulsa <b>Cerrar sesión</b> antes de escanear.
+                      </p>
                     </div>
                   </div>
                 </div>
