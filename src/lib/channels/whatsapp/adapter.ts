@@ -1,9 +1,10 @@
 import { ConnectionStatus, WhatsAppProvider } from '@prisma/client';
 
 export interface SendMessageOptions {
-  to: string;            // Número de teléfono en formato internacional E.164 (ej: "+34600111222")
+  to: string;            // Número de teléfono o JID internacional
   text: string;
   recipientBsuid?: string; // BSUID / WA_ID específico para YCloud / Meta
+  waLid?: string;        // WhatsApp LID para cuentas multi-dispositivo en Baileys
   template?: {
     name: string;
     language: string;

@@ -56,6 +56,16 @@ async function processWorkerJobs() {
           console.log('[Worker] Ejecutando orden WHATSAPP_DISCONNECT...');
           const adapter = await getWhatsAppAdapter('BAILEYS');
           await adapter.disconnect();
+        } else if (job.type === 'SEND_OUTBOUND') {
+          console.log(`[Worker] Enviando mensaje saliente a ${payload.to}...`);
+          const adapter = await getWhatsAppAdapter(payload.provider);
+          await adapter.sendMessage({
+            to: payload.to,
+            text: payload.text,
+            recipientBsuid: payload.recipientBsuid,
+            waLid: payload.waLid,
+          });
+          console.log(`[Worker] Mensaje saliente enviado con éxito a ${payload.to}`);
         }
 
         await prisma.workerJob.update({
@@ -200,12 +210,13 @@ async function handleInboundMessageJob(payload: {
 
   // Enviar mensaje hacia WhatsApp mediante el adaptador
   await adapter.sendMessage({
-    to,
+    to: conversation.contact?.waLid || to,
     text: finalAssistantText,
-    recipientBsuid: bsuid,
+    recipientBsuid: conversation.contact?.ycloudBsuid || bsuid,
+    waLid: conversation.contact?.waLid || undefined,
   });
 
-  console.log(`[Worker] Respuesta de LumenIA enviada a ${to} (${executedTools.length} tools usadas)`);
+  console.log(`[Worker] Respuesta de LumenIA enviada a ${conversation.contact?.waLid || to} (${executedTools.length} tools usadas)`);
 }
 
 /**

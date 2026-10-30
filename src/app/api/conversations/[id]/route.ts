@@ -91,14 +91,24 @@ export async function POST(
         data: { updatedAt: new Date(), lastMessageAt: new Date() },
       });
 
-      // Si es de WhatsApp, enviarlo al cliente por el adaptador correspondiente
-      if (conversation.channel === 'WHATSAPP' && conversation.contact?.phone) {
-        const adapter = await getWhatsAppAdapter(conversation.waProvider || undefined);
-        await adapter.sendMessage({
-          to: conversation.contact.phone,
-          text,
-          recipientBsuid: conversation.contact.ycloudBsuid || undefined,
-        });
+      // Si es de WhatsApp, delegar el envío al Worker mediante WorkerJob
+      if (conversation.channel === 'WHATSAPP' && conversation.contact) {
+        const target = conversation.contact.waLid || conversation.contact.phone;
+        if (target) {
+          await prisma.workerJob.create({
+            data: {
+              type: 'SEND_OUTBOUND',
+              payload: {
+                provider: conversation.waProvider || 'BAILEYS',
+                to: target,
+                text,
+                recipientBsuid: conversation.contact.ycloudBsuid || undefined,
+                waLid: conversation.contact.waLid || undefined,
+              },
+              scheduledFor: new Date(),
+            },
+          });
+        }
       }
 
       return NextResponse.json({ success: true, message: createdMsg });

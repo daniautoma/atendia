@@ -127,6 +127,13 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
 
       baileysSocket.ev.on('connection.update', async (update: any) => {
         const { connection, lastDisconnect, qr } = update;
+        const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+        const errMsg = lastDisconnect?.error?.message;
+
+        fs.appendFileSync(
+          'baileys-debug.log',
+          `[${new Date().toISOString()}] connection=${connection}, hasQr=${!!qr}, statusCode=${statusCode}, errMsg=${errMsg}\n`
+        );
 
         if (qr) {
           // Generar código QR PNG y persistirlo en PostgreSQL
@@ -191,17 +198,17 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
           try {
             console.log(`[Baileys] Mensaje entrante de ${phone} (${pushName}): "${text}"`);
 
-            // 1. Crear o actualizar contacto
+            // 1. Crear o actualizar contacto guardando su senderJid en waLid
             const contact = await prisma.contact.upsert({
               where: { phone },
               update: {
                 name: pushName,
-                waLid: msg.key.participant || undefined,
+                waLid: senderJid,
               },
               create: {
                 name: pushName,
                 phone,
-                waLid: msg.key.participant || undefined,
+                waLid: senderJid,
               },
             });
 
@@ -303,10 +310,21 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
       };
     }
 
-    const cleanPhone = options.to.replace(/\D/g, '');
-    const jid = `${cleanPhone}@s.whatsapp.net`;
+    let jid = options.waLid || options.to;
+    if (!jid.includes('@')) {
+      const clean = jid.replace(/\D/g, '');
+      if (options.recipientBsuid?.endsWith('@lid')) {
+        jid = options.recipientBsuid;
+      } else if (clean.length > 13) {
+        // Los LIDs de WhatsApp típicamente tienen 15 dígitos
+        jid = `${clean}@lid`;
+      } else {
+        jid = `${clean}@s.whatsapp.net`;
+      }
+    }
 
     try {
+      console.log(`[Baileys] Enviando mensaje WhatsApp a destino ${jid}: "${options.text.substring(0, 50)}..."`);
       const sent = await baileysSocket.sendMessage(jid, { text: options.text });
       return {
         externalId: sent?.key?.id || 'baileys_' + Date.now(),
@@ -314,6 +332,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
         status: 'SENT',
       };
     } catch (err: any) {
+      console.error(`[Baileys] Error enviando mensaje a ${jid}:`, err?.message);
       return {
         externalId: '',
         success: false,
@@ -325,14 +344,22 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
 
   async sendTyping(to: string): Promise<void> {
     if (!baileysSocket || currentStatus !== ConnectionStatus.CONNECTED) return;
-    const cleanPhone = to.replace(/\D/g, '');
-    const jid = `${cleanPhone}@s.whatsapp.net`;
+    let jid = to;
+    if (!jid.includes('@')) {
+      const clean = jid.replace(/\D/g, '');
+      jid = clean.length > 13 ? `${clean}@lid` : `${clean}@s.whatsapp.net`;
+    }
     try {
       await baileysSocket.sendPresenceUpdate('composing', jid);
     } catch {}
   }
 
   private async persistStatus() {
+    fs.appendFileSync(
+      'baileys-debug.log',
+      `[${new Date().toISOString()}] persistStatus: status=${currentStatus}, hasQr=${!!currentQrDataUrl}\n`
+    );
+
     const data: any = {
       waProvider: WhatsAppProvider.BAILEYS,
       waStatus: currentStatus,
@@ -348,6 +375,8 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     await prisma.channelConfig.update({
       where: { type: 'WHATSAPP' },
       data,
-    }).catch(() => {});
+    }).catch((err) => {
+      fs.appendFileSync('baileys-debug.log', `[${new Date().toISOString()}] persistStatus ERROR: ${err?.message}\n`);
+    });
   }
 }
