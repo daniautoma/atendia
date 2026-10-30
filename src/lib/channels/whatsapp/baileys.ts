@@ -5,7 +5,13 @@ import {
   WhatsAppStatusInfo,
 } from './adapter';
 import { prisma } from '@/lib/prisma';
-import { ConnectionStatus, WhatsAppProvider } from '@prisma/client';
+import {
+  ConnectionStatus,
+  WhatsAppProvider,
+  ChannelType,
+  ConversationStatus,
+  MessageSender,
+} from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 import QRCode from 'qrcode';
@@ -101,7 +107,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.appropriate('Desktop'),
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
       });
@@ -121,21 +127,20 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+          const isRegistered = !!(state?.creds as any)?.registered;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-          console.log(`[Baileys] Conexión cerrada (status ${statusCode}). Reconectar: ${shouldReconnect}`);
+          console.log(`[Baileys] Conexión cerrada (status ${statusCode}, registrado: ${isRegistered}).`);
 
           currentQrDataUrl = null;
 
-          if (statusCode === DisconnectReason.loggedOut) {
-            console.log('[Baileys] Sesión cerrada desde el teléfono (loggedOut). Limpiando credenciales...');
+          if (statusCode === DisconnectReason.loggedOut || (statusCode === 428 && !isRegistered)) {
+            console.log('[Baileys] Sesión expirada o desvinculada. Limpiando para nuevo intento limpio...');
             currentStatus = ConnectionStatus.DISCONNECTED;
             connectedPhone = null;
             await this.persistStatus();
             this.cleanSessionFolder();
-          } else {
-            // Códigos 515 (restartRequired), 428 (connectionClosed), 408 (timedOut):
-            // Ocurren naturalmente durante el emparejamiento con el móvil; reconectar con la misma sesión
+          } else if (shouldReconnect) {
             currentStatus = ConnectionStatus.CONNECTING;
             await this.persistStatus();
             console.log('[Baileys] Reconectando sesión tras cierre temporal...');
@@ -163,27 +168,40 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
           const senderJid = msg.key.remoteJid;
           if (!senderJid || senderJid.endsWith('@g.us')) continue;
 
-          const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+          const text =
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text ||
+            msg.message.imageMessage?.caption ||
+            '';
           if (!text.trim()) continue;
 
           const rawNumber = senderJid.split('@')[0].replace(/\D/g, '');
           const phone = '+' + rawNumber;
-          const pushName = msg.pushName || 'Usuario WhatsApp';
+          const pushName = msg.pushName || 'Cliente WhatsApp';
 
           try {
-            let contact = await prisma.contact.findUnique({ where: { phone } });
-            if (!contact) {
-              contact = await prisma.contact.create({
-                data: {
-                  name: pushName,
-                  phone,
-                  channel: 'WHATSAPP',
-                },
-              });
-            }
+            console.log(`[Baileys] Mensaje entrante de ${phone} (${pushName}): "${text}"`);
 
+            // 1. Crear o actualizar contacto
+            const contact = await prisma.contact.upsert({
+              where: { phone },
+              update: {
+                name: pushName,
+                waLid: msg.key.participant || undefined,
+              },
+              create: {
+                name: pushName,
+                phone,
+                waLid: msg.key.participant || undefined,
+              },
+            });
+
+            // 2. Crear o recuperar conversación
             let conv = await prisma.conversation.findFirst({
-              where: { contactId: contact.id },
+              where: {
+                contactId: contact.id,
+                channel: ChannelType.WHATSAPP,
+              },
               orderBy: { updatedAt: 'desc' },
             });
 
@@ -191,21 +209,33 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
               conv = await prisma.conversation.create({
                 data: {
                   contactId: contact.id,
-                  channel: 'WHATSAPP',
-                  status: 'BOT',
+                  channel: ChannelType.WHATSAPP,
+                  waProvider: WhatsAppProvider.BAILEYS,
+                  status: ConversationStatus.BOT_ACTIVE,
                 },
               });
             }
 
+            // 3. Guardar mensaje en BD
             await prisma.message.create({
               data: {
                 conversationId: conv.id,
-                sender: 'USER',
-                content: text,
+                sender: MessageSender.CUSTOMER,
+                text,
+                externalId: msg.key.id || undefined,
               },
             });
 
-            // Encolar con debounce de 8 segundos
+            // Actualizar conversación
+            await prisma.conversation.update({
+              where: { id: conv.id },
+              data: {
+                lastMessageAt: new Date(),
+                unreadCount: { increment: 1 },
+              },
+            });
+
+            // 4. Encolar con debounce de 8 segundos en WorkerJob
             const scheduledFor = new Date(Date.now() + 8000);
             await prisma.workerJob.create({
               data: {
@@ -220,6 +250,8 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
                 scheduledFor,
               },
             });
+
+            console.log(`[Baileys] Mensaje registrado en BD y encolado en WorkerJob (ID Conv: ${conv.id})`);
           } catch (e) {
             console.error('[Baileys] Error procesando mensaje entrante:', e);
           }

@@ -44,6 +44,18 @@ async function processWorkerJobs() {
           await handleAppointmentReminderJob(payload);
         } else if (job.type === 'DAILY_SUMMARY') {
           await handleDailySummaryJob();
+        } else if (job.type === 'WHATSAPP_CONNECT') {
+          console.log('[Worker] Ejecutando orden WHATSAPP_CONNECT...');
+          const adapter = await getWhatsAppAdapter('BAILEYS');
+          await adapter.connect(false);
+        } else if (job.type === 'WHATSAPP_RESET') {
+          console.log('[Worker] Ejecutando orden WHATSAPP_RESET...');
+          const adapter = await getWhatsAppAdapter('BAILEYS');
+          await adapter.connect(true);
+        } else if (job.type === 'WHATSAPP_DISCONNECT') {
+          console.log('[Worker] Ejecutando orden WHATSAPP_DISCONNECT...');
+          const adapter = await getWhatsAppAdapter('BAILEYS');
+          await adapter.disconnect();
         }
 
         await prisma.workerJob.update({
@@ -347,6 +359,18 @@ async function handleDailySummaryJob() {
  */
 async function runWorkerLoop() {
   console.log('✓ [Worker] Bucle de procesamiento de colas y debounce activado.');
+
+  // Inicializar adaptador de WhatsApp Baileys si está activo o en proceso de conexión
+  try {
+    const waConfig = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
+    if (waConfig?.waProvider === 'BAILEYS' && waConfig?.waStatus !== 'DISCONNECTED') {
+      console.log('📱 [Worker] Conectando Baileys WhatsApp en background...');
+      const adapter = await getWhatsAppAdapter('BAILEYS');
+      await adapter.connect(false);
+    }
+  } catch (err) {
+    console.error('[Worker] Error iniciando Baileys:', err);
+  }
 
   let tickCount = 0;
   while (true) {
