@@ -1,0 +1,246 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+enum ChannelType {
+  WHATSAPP
+  WEB
+}
+
+enum WhatsAppProvider {
+  BAILEYS
+  YCLOUD
+}
+
+enum ConnectionStatus {
+  DISCONNECTED
+  CONNECTING
+  WAITING_QR
+  CONNECTED
+  ERROR
+}
+
+enum ConversationStatus {
+  BOT_ACTIVE
+  WAITING_HUMAN
+  RESOLVED
+}
+
+enum MessageSender {
+  CUSTOMER
+  ASSISTANT
+  AGENT
+  SYSTEM
+}
+
+enum LogStatus {
+  SUCCESS
+  WARNING
+  ERROR
+  INFO
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(AGENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model BusinessProfile {
+  id              String   @id @default(cuid())
+  name            String   @default("Clínica Dental Lumen")
+  activity        String   @default("Odontología integral y estética dental")
+  address         String   @default("Calle Gran Vía 42, 2º B, 28013 Madrid")
+  phone           String   @default("+34 910 123 456")
+  website         String   @default("https://clinicalumen.es")
+  timezone        String   @default("Europe/Madrid")
+  assistantActive Boolean  @default(true)
+  agencyName      String   @default("Agencia Atendia")
+  agencyLogo      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AssistantConfig {
+  id                   String   @id @default(cuid())
+  name                 String   @default("LumenIA")
+  avatarUrl            String?
+  tone                 String   @default("cercano") // cercano, profesional, directo
+  welcomeMessage       String   @default("¡Hola! Bienvenido a Clínica Dental Lumen. ¿En qué te podemos ayudar hoy?")
+  customInstructions   String   @default("Sé amable y empático. Si un paciente tiene dolor urgente, ofrécele una cita de urgencia para hoy mismo.")
+  neverDoList          String   @default("No dar diagnósticos médicos definitivos. No prometer precios sin valoración previa. No atender fuera de horario sin ofrecer cita.")
+  businessHours        Json     // Horario L-D
+  outsideHoursBehavior String   @default("APPOINTMENT_OR_MESSAGE") // APPOINTMENT_OR_MESSAGE o ONLY_MESSAGE
+  handoffRules         Json     // { onComplaint: true, onUrgency: true, onHumanRequest: true, onUnknownAnswer: true, customRule: "" }
+  aiModel              String   @default("anthropic/claude-haiku-5.5")
+  aiModelFallback      String   @default("anthropic/claude-haiku-5.5")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Service {
+  id                  String   @id @default(cuid())
+  name                String
+  description         String
+  durationMinutes     Int      @default(30)
+  price               Float?
+  isPriceFrom         Boolean  @default(false)
+  requiresEvaluation Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KnowledgeNote {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChannelConfig {
+  id                 String           @id @default(cuid())
+  type               ChannelType      @unique
+  // WhatsApp settings
+  waProvider         WhatsAppProvider @default(BAILEYS)
+  waStatus           ConnectionStatus @default(DISCONNECTED)
+  waPhoneNumber      String?
+  waBusinessName     String?
+  // Baileys state
+  baileysQrCode      String?          @db.Text
+  baileysSessionDir  String           @default("./whatsapp-session")
+  // YCloud encrypted credentials & settings
+  ycloudApiKeyEnc    String?          // Cifrado AES-256-GCM
+  ycloudWebhookSecretEnc String?      // Cifrado AES-256-GCM
+  ycloudWabaId       String?
+  ycloudPhoneNumberId String?
+  // Web Chat settings
+  webChatEnabled     Boolean          @default(true)
+  webChatColor       String           @default("#0f766e")
+  webChatTitle       String           @default("Chat de Atención")
+  webChatWelcome     String           @default("¿Tienes alguna consulta o quieres pedir cita? Escríbenos.")
+  updatedAt          DateTime         @updatedAt
+}
+
+model Integration {
+  id            String   @id @default(cuid())
+  provider      String   @unique // "google_calendar", "gmail", "google_sheets", "slack", "stripe", "webhooks"
+  name          String
+  enabled       Boolean  @default(false)
+  credentialsEnc String?  // JSON cifrado con tokens, apiKeys o secrets
+  config        Json?    // Opciones y casillas de permisos del asistente
+  lastSyncAt    DateTime?
+  updatedAt     DateTime @updatedAt
+}
+
+model Contact {
+  id                String         @id @default(cuid())
+  name              String?
+  phone             String?        @unique
+  email             String?
+  // Identificadores de proveedores
+  waLid             String?        // WhatsApp Linked Device / Baileys LID
+  ycloudBsuid       String?        // YCloud / Meta Business-Scoped User ID
+  webSessionId      String?
+  notes             String?
+  conversations     Conversation[]
+  appointments      Appointment[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model Conversation {
+  id               String             @id @default(cuid())
+  contactId        String
+  contact          Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel          ChannelType
+  waProvider       WhatsAppProvider?
+  status           ConversationStatus @default(BOT_ACTIVE)
+  lastMessageAt    DateTime           @default(now())
+  unreadCount      Int                @default(0)
+  needsHumanReason String?
+  messages         Message[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([status, lastMessageAt])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         MessageSender
+  text           String
+  toolCalls      Json?         // Registro de tools invocadas para este mensaje
+  externalId     String?       // ID del mensaje en Baileys o YCloud (para idempotencia)
+  createdAt      DateTime      @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model Appointment {
+  id               String   @id @default(cuid())
+  contactId        String
+  contact          Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  serviceName      String
+  startTime        DateTime
+  endTime          DateTime
+  status           String   @default("CONFIRMED") // CONFIRMED, CANCELLED, RESCHEDULED
+  googleCalendarEventId String?
+  reminderSent     Boolean  @default(false)
+  paymentLinkId    String?
+  paymentStatus    String?  // PENDING, PAID
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String    @id @default(cuid())
+  action      String    // ej: "ai.response", "gcal.create_event", "ycloud.webhook", "handoff.triggered"
+  channel     ChannelType?
+  details     Json?
+  status      LogStatus @default(INFO)
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([action, createdAt])
+}
+
+model WorkerJob {
+  id        String   @id @default(cuid())
+  type      String   // "PROCESS_INBOUND", "SEND_WHATSAPP", "SEND_REMINDER", "DAILY_SUMMARY"
+  payload   Json
+  status    String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  attempts  Int      @default(0)
+  error     String?
+  scheduledFor DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledFor])
+}
+

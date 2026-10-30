@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # 1. Base de datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: atendia-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-atendia}
+      TZ: Europe/Madrid
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # 2. Servidor Web Next.js (Panel de control, Chat Web y Webhooks YCloud)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atendia-web
+    restart: always
+    command: npm run start
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-atendia}
+      APP_URL: ${APP_URL:-https://atendia.tudominio.com}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@atendia.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin1234password}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      TZ: Europe/Madrid
+    depends_on:
+      - postgres
+    networks:
+      - internal
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+      # Enrutamiento HTTP a HTTPS
+      - "traefik.http.routers.atendia-web.rule=Host(`${DOMAIN:-atendia.tudominio.com}`)"
+      - "traefik.http.routers.atendia-web.entrypoints=websecure"
+      - "traefik.http.routers.atendia-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.atendia-web.loadbalancer.server.port=3000"
+
+  # 3. Worker de fondo (Mantiene Baileys, debounce 8s, IA y tareas programadas)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atendia-worker
+    restart: always
+    command: npm run start:worker
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-atendia}
+      APP_URL: ${APP_URL:-https://atendia.tudominio.com}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      AUTH_SECRET: ${AUTH_SECRET}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      WHATSAPP_SESSION_DIR: /app/whatsapp-session
+      TZ: Europe/Madrid
+    depends_on:
+      - postgres
+      - web
+    volumes:
+      - whatsapp_session:/app/whatsapp-session
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+    driver: local
+  whatsapp_session:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge
+  traefik_public:
+    external: true
+

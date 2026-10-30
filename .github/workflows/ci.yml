@@ -1,0 +1,36 @@
+name: CI Atendia
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar cliente de Prisma
+        run: npx prisma generate
+
+      - name: Verificación de tipos TypeScript y Compilación
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/atendia"
+          ENCRYPTION_KEY: "6742eac845a5f7747cdb5cb9117df7bd25e0240f016a25ba38b5eba6d0c7e043"
+          AUTH_SECRET: "f40774fb662aa468e7d12a0194acee0d05eba6fffd94ba6879462b8f7e9732c0"
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npx next build
+
