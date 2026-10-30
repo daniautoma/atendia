@@ -14,20 +14,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - internal
+      - atendia-net
 
-  # 2. Servidor Web Next.js (Panel de control, Chat Web y Webhooks YCloud)
+  # 2. Servidor Web Next.js (Dashboard, Chat Web, API)
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: atendia-web
     restart: always
-    command: npm run start
+    command: sh -c "npx prisma db push && npm run start"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-atendia}
-      APP_URL: ${APP_URL:-https://atendia.tudominio.com}
+      APP_URL: ${APP_URL}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       AUTH_SECRET: ${AUTH_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@atendia.local}
@@ -38,19 +38,13 @@ services:
       TZ: Europe/Madrid
     depends_on:
       - postgres
+    expose:
+      - "3000"
     networks:
-      - internal
-      - traefik_public
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik_public"
-      # Enrutamiento HTTP a HTTPS
-      - "traefik.http.routers.atendia-web.rule=Host(`${DOMAIN:-atendia.tudominio.com}`)"
-      - "traefik.http.routers.atendia-web.entrypoints=websecure"
-      - "traefik.http.routers.atendia-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.atendia-web.loadbalancer.server.port=3000"
+      - atendia-net
+      - dokploy-network
 
-  # 3. Worker de fondo (Mantiene Baileys, debounce 8s, IA y tareas programadas)
+  # 3. Worker de fondo (WhatsApp Baileys, Debounce 8s, Tareas programadas)
   worker:
     build:
       context: .
@@ -61,7 +55,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-atendia}
-      APP_URL: ${APP_URL:-https://atendia.tudominio.com}
+      APP_URL: ${APP_URL}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       AUTH_SECRET: ${AUTH_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
@@ -73,7 +67,7 @@ services:
     volumes:
       - whatsapp_session:/app/whatsapp-session
     networks:
-      - internal
+      - atendia-net
 
 volumes:
   postgres_data:
@@ -82,8 +76,7 @@ volumes:
     driver: local
 
 networks:
-  internal:
+  atendia-net:
     driver: bridge
-  traefik_public:
+  dokploy-network:
     external: true
-
