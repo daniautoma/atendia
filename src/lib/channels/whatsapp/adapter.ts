@@ -36,7 +36,7 @@ export interface WhatsAppStatusInfo {
 export interface IWhatsAppAdapter {
   providerName: WhatsAppProvider;
   getStatus(): Promise<WhatsAppStatusInfo>;
-  connect(): Promise<void>;
+  connect(forceFresh?: boolean): Promise<void>;
   disconnect(): Promise<void>;
   sendMessage(options: SendMessageOptions): Promise<SendMessageResult>;
   sendTyping(to: string): Promise<void>;
