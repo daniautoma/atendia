@@ -24,9 +24,14 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
       where: { type: 'WHATSAPP' },
     });
 
+    // Usar estado en memoria o caer en el estado persistido si no está en proceso activo
+    const status = currentStatus !== ConnectionStatus.DISCONNECTED
+      ? currentStatus
+      : (channel?.waStatus || ConnectionStatus.DISCONNECTED);
+
     return {
       provider: WhatsAppProvider.BAILEYS,
-      status: currentStatus,
+      status,
       phoneNumber: connectedPhone || channel?.waPhoneNumber,
       businessName: channel?.waBusinessName || 'Clínica Dental Lumen',
       qrCode: currentQrDataUrl || channel?.baileysQrCode,
@@ -37,11 +42,36 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     const sessionDir = process.env.WHATSAPP_SESSION_DIR || './whatsapp-session';
     const absoluteSessionDir = path.resolve(process.cwd(), sessionDir);
 
+    // Si existen credenciales de sesión pero no llegaron a registrarse o están obsoletas,
+    // limpiamos el directorio para forzar la emisión inmediata de un nuevo código QR limpio.
+    if (fs.existsSync(absoluteSessionDir)) {
+      const credsPath = path.join(absoluteSessionDir, 'creds.json');
+      if (fs.existsSync(credsPath)) {
+        try {
+          const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+          if (!creds.registered) {
+            console.log('[Baileys] Sesión incompleta previa detectada. Limpiando para nuevo QR...');
+            fs.rmSync(absoluteSessionDir, { recursive: true, force: true });
+          }
+        } catch {
+          fs.rmSync(absoluteSessionDir, { recursive: true, force: true });
+        }
+      }
+    }
+
     if (!fs.existsSync(absoluteSessionDir)) {
       fs.mkdirSync(absoluteSessionDir, { recursive: true });
     }
 
     try {
+      // Si ya hay un socket abierto anterior, cerrarlo limpiamente
+      if (baileysSocket) {
+        try {
+          baileysSocket.end();
+        } catch {}
+        baileysSocket = null;
+      }
+
       const baileysModule = await import('@whiskeysockets/baileys');
       const makeWASocket = baileysModule.default || baileysModule.makeWASocket;
       const { useMultiFileAuthState, DisconnectReason } = baileysModule;
@@ -69,17 +99,22 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
           currentQrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
           currentStatus = ConnectionStatus.WAITING_QR;
           await this.persistStatus();
+          console.log('[Baileys] Nuevo código QR generado y guardado para visualización.');
         }
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
+          console.log(`[Baileys] Conexión cerrada. Status: ${statusCode}. Reconectar: ${shouldReconnect}`);
+
           currentStatus = ConnectionStatus.DISCONNECTED;
           currentQrDataUrl = null;
           await this.persistStatus();
 
-          if (shouldReconnect) {
+          if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
+            await this.disconnect();
+          } else if (shouldReconnect) {
             console.log('[Baileys] Desconexión temporal. Reconectando en 5 segundos...');
             setTimeout(() => this.connect(), 5000);
           }
@@ -92,6 +127,77 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
           await this.persistStatus();
         }
       });
+
+      // Manejo de mensajes entrantes vía WhatsApp
+      baileysSocket.ev.on('messages.upsert', async ({ messages, type }: any) => {
+        if (type !== 'notify') return;
+        for (const msg of messages) {
+          if (!msg.message || msg.key.fromMe) continue;
+          const senderJid = msg.key.remoteJid;
+          if (!senderJid || senderJid.endsWith('@g.us')) continue;
+
+          const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+          if (!text.trim()) continue;
+
+          const rawNumber = senderJid.split('@')[0].replace(/\D/g, '');
+          const phone = '+' + rawNumber;
+          const pushName = msg.pushName || 'Usuario WhatsApp';
+
+          try {
+            let contact = await prisma.contact.findUnique({ where: { phone } });
+            if (!contact) {
+              contact = await prisma.contact.create({
+                data: {
+                  name: pushName,
+                  phone,
+                  channel: 'WHATSAPP',
+                },
+              });
+            }
+
+            let conv = await prisma.conversation.findFirst({
+              where: { contactId: contact.id },
+              orderBy: { updatedAt: 'desc' },
+            });
+
+            if (!conv) {
+              conv = await prisma.conversation.create({
+                data: {
+                  contactId: contact.id,
+                  channel: 'WHATSAPP',
+                  status: 'BOT',
+                },
+              });
+            }
+
+            await prisma.message.create({
+              data: {
+                conversationId: conv.id,
+                sender: 'USER',
+                content: text,
+              },
+            });
+
+            // Encolar con debounce de 8 segundos
+            const scheduledFor = new Date(Date.now() + 8000);
+            await prisma.workerJob.create({
+              data: {
+                type: 'PROCESS_INBOUND',
+                payload: {
+                  conversationId: conv.id,
+                  contactId: contact.id,
+                  channel: 'WHATSAPP',
+                  text,
+                  to: phone,
+                },
+                scheduledFor,
+              },
+            });
+          } catch (e) {
+            console.error('[Baileys] Error procesando mensaje entrante:', e);
+          }
+        }
+      });
     } catch (err: any) {
       console.error('[Baileys] Error iniciando conexión:', err);
       currentStatus = ConnectionStatus.ERROR;
@@ -102,11 +208,19 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
   async disconnect(): Promise<void> {
     try {
       if (baileysSocket) {
-        await baileysSocket.logout();
+        await baileysSocket.logout().catch(() => {});
         baileysSocket.end();
         baileysSocket = null;
       }
     } catch {}
+
+    const sessionDir = process.env.WHATSAPP_SESSION_DIR || './whatsapp-session';
+    const absoluteSessionDir = path.resolve(process.cwd(), sessionDir);
+    if (fs.existsSync(absoluteSessionDir)) {
+      try {
+        fs.rmSync(absoluteSessionDir, { recursive: true, force: true });
+      } catch {}
+    }
 
     currentStatus = ConnectionStatus.DISCONNECTED;
     currentQrDataUrl = null;
@@ -124,7 +238,6 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
       };
     }
 
-    // Formatear destino a JID (ej: "34600111222@s.whatsapp.net")
     const cleanPhone = options.to.replace(/\D/g, '');
     const jid = `${cleanPhone}@s.whatsapp.net`;
 
@@ -166,4 +279,3 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     }).catch(() => {});
   }
 }
-

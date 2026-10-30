@@ -109,6 +109,12 @@ export default function CanalesPage() {
       });
 
       if (!res.ok) throw new Error('Error al actualizar WhatsApp');
+      const updated = await res.json();
+      if (updated.whatsapp) {
+        setWaStatus(updated.whatsapp.status || 'DISCONNECTED');
+        setQrCodeData(updated.whatsapp.qrCode || null);
+        if (updated.whatsapp.phoneNumber) setWaPhone(updated.whatsapp.phoneNumber);
+      }
       setSuccessWa(true);
       setTimeout(() => setSuccessWa(false), 2500);
       fetchChannelData();
@@ -319,13 +325,24 @@ export default function CanalesPage() {
                       <li>Apunta la cámara del móvil a este código QR para escanearlo.</li>
                     </ol>
 
-                    <div className="pt-2 flex gap-2">
+                    <div className="pt-2 flex flex-wrap gap-2">
                       <button
                         onClick={() => handleSaveWhatsApp('CONNECT')}
                         disabled={savingWa}
                         className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
                       >
-                        {savingWa ? 'Iniciando...' : 'Generar / Refrescar Código QR'}
+                        {savingWa ? 'Generando QR...' : 'Generar / Refrescar Código QR'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await handleSaveWhatsApp('DISCONNECT');
+                          setTimeout(() => handleSaveWhatsApp('CONNECT'), 400);
+                        }}
+                        disabled={savingWa}
+                        className="px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium cursor-pointer border border-stone-200"
+                        title="Elimina cualquier intento previo y fuerza un QR nuevo desde cero"
+                      >
+                        Reiniciar desde cero
                       </button>
                     </div>
                   </div>

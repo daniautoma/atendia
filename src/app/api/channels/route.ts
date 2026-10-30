@@ -80,6 +80,12 @@ export async function PUT(req: Request) {
       if (wa.action === 'CONNECT') {
         const adapter = await getWhatsAppAdapter(wa.provider);
         await adapter.connect();
+        // Esperar brevemente (hasta 1.5s) para que el QR esté disponible de inmediato
+        for (let i = 0; i < 8; i++) {
+          const st = await adapter.getStatus();
+          if (st.qrCode || st.status === ConnectionStatus.CONNECTED) break;
+          await new Promise((r) => setTimeout(r, 200));
+        }
       } else if (wa.action === 'DISCONNECT') {
         const adapter = await getWhatsAppAdapter(wa.provider);
         await adapter.disconnect();
@@ -100,10 +106,23 @@ export async function PUT(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    // Retornar estado actualizado en vivo
+    const currentWa = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
+    const adapter = await getWhatsAppAdapter(currentWa?.waProvider || WhatsAppProvider.BAILEYS);
+    const liveStatus = await adapter.getStatus();
+
+    return NextResponse.json({
+      success: true,
+      whatsapp: {
+        provider: currentWa?.waProvider || WhatsAppProvider.BAILEYS,
+        status: liveStatus.status,
+        phoneNumber: liveStatus.phoneNumber || currentWa?.waPhoneNumber,
+        businessName: liveStatus.businessName || currentWa?.waBusinessName,
+        qrCode: liveStatus.qrCode || currentWa?.baileysQrCode,
+      },
+    });
   } catch (error: any) {
     console.error('Error al actualizar canales:', error);
     return NextResponse.json({ error: error?.message || 'Error al guardar' }, { status: 500 });
   }
 }
-
