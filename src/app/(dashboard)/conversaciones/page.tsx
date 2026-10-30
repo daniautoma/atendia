@@ -31,6 +31,8 @@ export default function ConversacionesPage() {
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const prevMessagesCountRef = useRef(0);
+
   const fetchList = async () => {
     try {
       const res = await fetch(`/api/conversations?filter=${filter}`);
@@ -46,8 +48,8 @@ export default function ConversacionesPage() {
     }
   };
 
-  const fetchActiveConversation = async (id: string) => {
-    setLoadingConv(true);
+  const fetchActiveConversation = async (id: string, isSilent = false) => {
+    if (!isSilent) setLoadingConv(true);
     try {
       const res = await fetch(`/api/conversations/${id}`);
       const data = await res.json();
@@ -55,25 +57,33 @@ export default function ConversacionesPage() {
         setActiveConv(data.conversation);
       }
     } catch {} finally {
-      setLoadingConv(false);
+      if (!isSilent) setLoadingConv(false);
     }
   };
 
   useEffect(() => {
     fetchList();
-    const interval = setInterval(fetchList, 4000);
+    const interval = setInterval(fetchList, 3000);
     return () => clearInterval(interval);
   }, [filter]);
 
   useEffect(() => {
     if (selectedId) {
-      fetchActiveConversation(selectedId);
+      fetchActiveConversation(selectedId, false);
+      const interval = setInterval(() => {
+        fetchActiveConversation(selectedId, true);
+      }, 2500);
+      return () => clearInterval(interval);
     }
   }, [selectedId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConv?.messages]);
+    const currentCount = activeConv?.messages?.length || 0;
+    if (currentCount > prevMessagesCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessagesCountRef.current = currentCount;
+  }, [activeConv?.messages?.length]);
 
   const handleAction = async (action: 'TAKE_CONTROL' | 'HANDOVER_TO_BOT') => {
     if (!selectedId) return;
