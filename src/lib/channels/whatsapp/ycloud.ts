@@ -60,8 +60,8 @@ export class YCloudWhatsAppAdapter implements IWhatsAppAdapter {
         return {
           provider: WhatsAppProvider.YCLOUD,
           status: ConnectionStatus.CONNECTED,
-          phoneNumber: firstNum?.phoneNumber || channel.waPhoneNumber || '+34 Oficial WABA',
-          businessName: firstNum?.verifiedName || channel.waBusinessName || 'Clínica Dental Lumen',
+          phoneNumber: firstNum?.phoneNumber || channel.waPhoneNumber || '+503 Oficial WABA',
+          businessName: firstNum?.verifiedName || channel.waBusinessName || 'Clínica Dental San Salvador',
           wabaId: firstNum?.wabaId || channel.ycloudWabaId,
         };
       }

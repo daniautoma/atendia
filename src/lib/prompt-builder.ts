@@ -34,10 +34,10 @@ export interface PromptContext {
 }
 
 export function buildSystemPrompt(ctx: PromptContext): string {
-  // Obtener fecha y hora actual en la zona horaria especificada (Europe/Madrid)
+  // Obtener fecha y hora actual en la zona horaria especificada (America/El_Salvador)
   const now = new Date();
-  const dateFormatter = new Intl.DateTimeFormat('es-ES', {
-    timeZone: ctx.timezone || 'Europe/Madrid',
+  const dateFormatter = new Intl.DateTimeFormat('es-SV', {
+    timeZone: ctx.timezone || 'America/El_Salvador',
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -60,7 +60,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
         .map(
           (s) =>
             `- **${s.name}**: ${s.description} | Duración: ${s.durationMinutes} min | Precio: ${
-              s.price !== null ? `${s.isPriceFrom ? 'Desde ' : ''}${s.price}€` : 'A valorar'
+              s.price !== null ? `${s.isPriceFrom ? 'Desde $' : '$'}${s.price}` : 'A valorar'
             }${s.requiresEvaluation ? ' (Requiere valoración clínica previa)' : ''}`
         )
         .join('\n')

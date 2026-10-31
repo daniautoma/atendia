@@ -155,11 +155,11 @@ export default function ActividadPage() {
                       </div>
 
                       <span className="text-[11px] text-stone-400 font-mono">
-                        {new Date(log.createdAt).toLocaleTimeString('es-ES', {
+                        {new Date(log.createdAt).toLocaleTimeString('es-SV', {
                           hour: '2-digit',
                           minute: '2-digit',
                           second: '2-digit',
-                          timeZone: 'Europe/Madrid',
+                          timeZone: 'America/El_Salvador',
                         })}
                       </span>
                     </div>

@@ -49,8 +49,10 @@ async function processWorkerJobs() {
           const adapter = await getWhatsAppAdapter('BAILEYS');
           await adapter.connect(false);
         } else if (job.type === 'WHATSAPP_RESET') {
-          console.log('[Worker] Ejecutando orden WHATSAPP_RESET...');
+          console.log('[Worker] Ejecutando orden WHATSAPP_RESET (Desconexión limpia + Espera 1s + Nuevo Socket)...');
           const adapter = await getWhatsAppAdapter('BAILEYS');
+          await adapter.disconnect();
+          await new Promise((r) => setTimeout(r, 1000));
           await adapter.connect(true);
         } else if (job.type === 'WHATSAPP_DISCONNECT') {
           console.log('[Worker] Ejecutando orden WHATSAPP_DISCONNECT...');
@@ -128,13 +130,13 @@ async function handleInboundMessageJob(payload: {
   ]);
 
   const systemPrompt = buildSystemPrompt({
-    assistantName: assistant?.name || 'LumenIA',
-    businessName: business?.name || 'Clínica Dental Lumen',
-    activity: business?.activity || 'Odontología integral en Madrid',
-    address: business?.address || 'Gran Vía 42, Madrid',
-    phone: business?.phone || '+34 910 123 456',
-    website: business?.website || 'https://clinicalumen.es',
-    timezone: business?.timezone || 'Europe/Madrid',
+    assistantName: assistant?.name || 'DentalIA',
+    businessName: business?.name || 'Clínica Dental San Salvador',
+    activity: business?.activity || 'Odontología integral y diseño de sonrisa',
+    address: business?.address || 'Paseo General Escalón #3700, San Salvador',
+    phone: business?.phone || '+503 2200 1234',
+    website: business?.website || 'https://dentalsansalvador.sv',
+    timezone: business?.timezone || 'America/El_Salvador',
     tone: assistant?.tone || 'cercano',
     welcomeMessage: assistant?.welcomeMessage || '',
     customInstructions: assistant?.customInstructions || '',
@@ -240,8 +242,8 @@ async function checkUpcomingAppointments() {
     for (const appt of appointments) {
       if (appt.contact?.phone) {
         const adapter = await getWhatsAppAdapter();
-        const dateStr = appt.startTime.toLocaleDateString('es-ES', {
-          timeZone: 'Europe/Madrid',
+        const dateStr = appt.startTime.toLocaleDateString('es-SV', {
+          timeZone: 'America/El_Salvador',
           weekday: 'long',
           day: 'numeric',
           month: 'long',
@@ -249,7 +251,7 @@ async function checkUpcomingAppointments() {
           minute: '2-digit',
         });
 
-        const reminderText = `Hola ${appt.contact.name || ''}, te recordamos tu cita de mañana para ${appt.serviceName} a las ${dateStr} en Clínica Dental Lumen (Calle Gran Vía 42). Si necesitas cambiarla o cancelarla, dínoslo por aquí. ¡Te esperamos!`;
+        const reminderText = `Hola ${appt.contact.name || ''}, te recordamos tu cita de mañana para ${appt.serviceName} a las ${dateStr} en Clínica Dental San Salvador (Paseo General Escalón #3700). Si necesitas reprogramarla o cancelarla, avísanos por este medio. ¡Te esperamos!`;
 
         await adapter.sendMessage({
           to: appt.contact.phone,
@@ -304,14 +306,14 @@ async function handleAppointmentReminderJob(payload: any) {
  */
 async function checkDailySummarySchedule() {
   const now = new Date();
-  const formatter = new Intl.DateTimeFormat('es-ES', {
-    timeZone: 'Europe/Madrid',
+  const formatter = new Intl.DateTimeFormat('es-SV', {
+    timeZone: 'America/El_Salvador',
     hour: '2-digit',
     minute: '2-digit',
   });
   const timeStr = formatter.format(now);
 
-  // A las 20:00 en hora de Madrid
+  // A las 20:00 en hora de El Salvador
   if (timeStr === '20:00') {
     await handleDailySummaryJob();
   }
@@ -334,7 +336,7 @@ async function handleDailySummaryJob() {
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 12px;">
         <h2 style="color: #0f766e;">Resumen Diario de Atención — Atendia</h2>
-        <p>Aquí tienes el balance de actividad de hoy en <b>Clínica Dental Lumen</b>:</p>
+        <p>Aquí tienes el balance de actividad de hoy en <b>Clínica Dental San Salvador</b>:</p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #eee;"><b>Conversaciones atendidas hoy:</b></td>
@@ -349,13 +351,13 @@ async function handleDailySummaryJob() {
             <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; color: ${waitingCount > 0 ? '#b91c1c' : '#374151'}; font-size: 18px;"><b>${waitingCount}</b></td>
           </tr>
         </table>
-        <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">Informe generado automáticamente a las 20:00 (Europe/Madrid) por Atendia.</p>
+        <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">Informe generado automáticamente a las 20:00 (America/El_Salvador) por Atendia.</p>
       </div>
     `;
 
     await sendGmailEmail({
       to: recipient,
-      subject: `Resumen de Atención Atendia — ${new Date().toLocaleDateString('es-ES')}`,
+      subject: `Resumen de Atención Atendia — ${new Date().toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador' })}`,
       htmlBody,
     });
 

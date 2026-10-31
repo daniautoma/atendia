@@ -38,7 +38,7 @@ export async function sendSlackNotification(title: string, details: Record<strin
         elements: [
           {
             type: 'mrkdwn',
-            text: `*Hora oficial:* ${new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' })} | Europe/Madrid`,
+            text: `*Hora oficial:* ${new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' })} | America/El_Salvador`,
           },
         ],
       },

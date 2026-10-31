@@ -67,6 +67,16 @@ export async function PUT(req: Request) {
         updateData.waPhoneNumber = wa.phoneNumber;
       }
 
+      if (wa.action === 'RESET' || wa.action === 'DISCONNECT') {
+        updateData.baileysQrCode = null;
+        if (wa.action === 'DISCONNECT') {
+          updateData.waStatus = ConnectionStatus.DISCONNECTED;
+          updateData.waPhoneNumber = null;
+        } else if (wa.action === 'RESET') {
+          updateData.waStatus = ConnectionStatus.WAITING_QR;
+        }
+      }
+
       await prisma.channelConfig.update({
         where: { type: 'WHATSAPP' },
         data: updateData,
@@ -92,12 +102,12 @@ export async function PUT(req: Request) {
           },
         });
 
-        // Esperar brevemente (hasta 3.5s) a que el Worker genere el QR o cambie de estado
-        for (let i = 0; i < 18; i++) {
+        // Esperar brevemente (hasta 4s) a que el Worker genere el QR o cambie de estado
+        for (let i = 0; i < 20; i++) {
           await new Promise((r) => setTimeout(r, 200));
           const updatedWa = await prisma.channelConfig.findUnique({ where: { type: 'WHATSAPP' } });
           if (wa.action === 'DISCONNECT' && updatedWa?.waStatus === 'DISCONNECTED') break;
-          if (updatedWa?.baileysQrCode || updatedWa?.waStatus === 'CONNECTED') break;
+          if (wa.action !== 'DISCONNECT' && (updatedWa?.baileysQrCode || updatedWa?.waStatus === 'CONNECTED')) break;
         }
       }
     }

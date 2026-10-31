@@ -228,16 +228,23 @@ export default function ResumenPage() {
           <div className="flex items-center justify-between pb-3 border-b border-stone-100">
             <div className="flex items-center gap-2">
               <CalendarCheck2 className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-stone-900">Citas Agendadas por el Asistente</h3>
+              <h3 className="text-sm font-bold text-stone-900">Citas Agendadas</h3>
+              <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold ml-2">
+                {data?.appointments?.length || 0} cita(s)
+              </span>
             </div>
-            <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold">
-              {data?.appointments?.length || 0} cita(s) registrada(s)
-            </span>
+            <Link
+              href="/calendario"
+              className="text-xs text-teal-700 hover:text-teal-800 font-semibold flex items-center gap-1 transition-colors"
+            >
+              <span>Ver calendario completo</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {(!data?.appointments || data.appointments.length === 0) ? (
             <div className="text-center py-8 text-stone-400 text-xs">
-              No hay citas agendadas todavía. Cuando un paciente reserve por WhatsApp o Web, aparecerá aquí.
+              No hay citas agendadas todavía. Cuando un paciente reserve por WhatsApp, Web o desde el Calendario, aparecerá aquí.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -258,44 +265,36 @@ export default function ResumenPage() {
                       <td className="py-3 font-bold text-stone-900">{a.contactName || 'Paciente'}</td>
                       <td className="py-3 text-stone-700">{a.serviceName}</td>
                       <td className="py-3 text-stone-600 font-mono">
-                        {new Date(a.startTime).toLocaleDateString('es-ES', {
+                        {new Date(a.startTime).toLocaleDateString('es-SV', {
                           weekday: 'short',
                           day: 'numeric',
                           month: 'short',
                           hour: '2-digit',
                           minute: '2-digit',
-                          timeZone: 'Europe/Madrid',
+                          timeZone: 'America/El_Salvador',
                         })}
                       </td>
                       <td className="py-3 text-stone-500 font-mono">{a.contactPhone || '—'}</td>
                       <td className="py-3">
-                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
-                          Confirmada
+                        <span className={`px-2 py-0.5 rounded-md font-semibold text-[11px] ${
+                          a.status === 'CANCELLED'
+                            ? 'bg-rose-50 text-rose-700'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}>
+                          {a.status === 'CANCELLED' ? 'Cancelada' : 'Confirmada'}
                         </span>
                       </td>
                       <td className="py-3 text-right">
-                        <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch('/api/appointments', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ appointmentId: a.id, action: 'SYNC_CALENDAR' }),
-                              });
-                              const json = await res.json();
-                              if (json.success) {
-                                alert('✓ Cita sincronizada con éxito en tu Google Calendar');
-                              } else {
-                                alert('Error al sincronizar: ' + (json.error || 'Verifica que Google Calendar esté conectado'));
-                              }
-                            } catch (e: any) {
-                              alert('Error de red: ' + e.message);
-                            }
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-semibold cursor-pointer border border-teal-200"
-                        >
-                          Sincronizar a Calendar
-                        </button>
+                        {a.googleCalendarEventId ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-[11px] font-semibold border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Sincronizado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 text-stone-600 text-[11px] font-medium border border-stone-200">
+                            Guardado local
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -344,7 +343,7 @@ export default function ResumenPage() {
                     )}
                   </div>
                   <span className="text-stone-400 text-[11px]">
-                    {new Date(log.createdAt).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' })}
+                    {new Date(log.createdAt).toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' })}
                   </span>
                 </div>
               ))}

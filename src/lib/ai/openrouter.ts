@@ -175,7 +175,7 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
         wasFallback: false,
         message: {
           role: 'assistant',
-          content: 'Nuestra **Limpieza Dental e Higiene Profunda** tiene una tarifa oficial de **55€** (duración: 45 min) e incluye ultrasonidos, pulido y flúor. ¿Deseas que te reserve cita para este tratamiento?',
+          content: 'Nuestra **Limpieza Dental e Higiene Profunda** tiene una tarifa oficial de **$35** (duración: 45 min) e incluye ultrasonidos, pulido y flúor. ¿Deseas que te reserve cita para este tratamiento?',
         },
       };
     }
@@ -186,7 +186,7 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
         wasFallback: false,
         message: {
           role: 'assistant',
-          content: 'Entiendo perfectamente tu dolor y lo molesto que es. He activado el protocolo de urgencia y transferido la conversación a nuestro equipo clínico para atenderte de inmediato. ¿Nos puedes facilitar un teléfono directo o prefieres venir directamente a Calle Gran Vía 42?',
+          content: 'Entiendo perfectamente tu dolor y lo molesto que es. He activado el protocolo de urgencia y transferido la conversación a nuestro equipo clínico para atenderte de inmediato. ¿Nos puedes facilitar un teléfono directo o prefieres venir directamente a Paseo General Escalón #3700, San Salvador?',
         },
       };
     }
@@ -323,7 +323,7 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
               name: 'agendar_cita',
               arguments: JSON.stringify({
                 nombre_cliente: 'Paciente Demo',
-                telefono: '+34600123456',
+                telefono: '+50371234567',
                 servicio: 'Primera Visita y Diagnóstico 3D',
                 fecha_hora: '2026-11-03T11:30:00',
                 confirmado_por_cliente: true,

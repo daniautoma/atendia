@@ -9,12 +9,12 @@ export async function GET() {
     if (!business) {
       business = await prisma.businessProfile.create({
         data: {
-          name: 'Clínica Dental Lumen',
-          activity: 'Odontología integral y estética dental',
-          address: 'Calle Gran Vía 42, 2º B, 28013 Madrid',
-          phone: '+34 910 123 456',
-          website: 'https://clinicalumen.es',
-          timezone: 'Europe/Madrid',
+          name: 'Clínica Dental San Salvador',
+          activity: 'Odontología integral y diseño de sonrisa',
+          address: 'Paseo General Escalón #3700, Colonia Escalón, San Salvador',
+          phone: '+503 2200 1234',
+          website: 'https://dentalsansalvador.sv',
+          timezone: 'America/El_Salvador',
         },
       });
     }

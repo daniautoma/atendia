@@ -34,8 +34,8 @@ export default function ProbarPage() {
     {
       id: 'welcome',
       sender: 'ASSISTANT',
-      text: '¡Hola! Bienvenido a Clínica Dental Lumen. Soy LumenIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
-      timestamp: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+      text: '¡Hola! Bienvenido a Clínica Dental San Salvador. Soy DentalIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
+      timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
     },
   ]);
 
@@ -62,7 +62,7 @@ export default function ProbarPage() {
       id: 'user_' + Date.now(),
       sender: 'CUSTOMER',
       text,
-      timestamp: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+      timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
     };
 
     const newHistory = [...messages, userMsg];
@@ -93,7 +93,7 @@ export default function ProbarPage() {
         sender: 'ASSISTANT',
         text: data.response || 'He procesado tu consulta con nuestras herramientas clínicas.',
         toolCalls: data.toolCalls,
-        timestamp: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+        timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -105,7 +105,7 @@ export default function ProbarPage() {
           id: 'err_' + Date.now(),
           sender: 'ASSISTANT',
           text: `⚠️ Error de comunicación: ${err?.message || 'Error del servidor'}`,
-          timestamp: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+          timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
         },
       ]);
     } finally {
@@ -118,8 +118,8 @@ export default function ProbarPage() {
       {
         id: 'welcome_' + Date.now(),
         sender: 'ASSISTANT',
-        text: '¡Hola! Bienvenido a Clínica Dental Lumen. Soy LumenIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
-        timestamp: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+        text: '¡Hola! Bienvenido a Clínica Dental San Salvador. Soy DentalIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
+        timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
       },
     ]);
     setTimeline([]);
@@ -176,10 +176,10 @@ export default function ProbarPage() {
                 <Bot className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-bold text-stone-900 leading-tight">LumenIA (Simulación)</p>
+                <p className="text-xs font-bold text-stone-900 leading-tight">DentalIA (Simulación)</p>
                 <div className="flex items-center gap-1.5 text-[10px] text-stone-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>En línea • Europe/Madrid</span>
+                  <span>En línea • America/El_Salvador</span>
                 </div>
               </div>
             </div>

@@ -23,8 +23,8 @@ export default async function DemoPage() {
             L
           </div>
           <div>
-            <h1 className="font-bold text-stone-900 text-sm">{business?.name || 'Clínica Dental Lumen'}</h1>
-            <p className="text-[11px] text-stone-500">{business?.activity || 'Odontología integral en Madrid'}</p>
+            <h1 className="font-bold text-stone-900 text-sm">{business?.name || 'Clínica Dental San Salvador'}</h1>
+            <p className="text-[11px] text-stone-500">{business?.activity || 'Odontología integral en San Salvador'}</p>
           </div>
         </div>
 
@@ -45,7 +45,7 @@ export default async function DemoPage() {
         </span>
 
         <h2 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight max-w-2xl">
-          Tu sonrisa en las mejores manos en el centro de Madrid
+          Tu sonrisa en las mejores manos en San Salvador
         </h2>
 
         <p className="mt-4 text-stone-600 text-sm max-w-xl leading-relaxed">
@@ -62,13 +62,13 @@ export default async function DemoPage() {
           <div className="p-4 rounded-xl bg-white border border-stone-200 shadow-2xs">
             <Phone className="w-5 h-5 text-teal-600 mb-2" />
             <h3 className="font-bold text-xs text-stone-900">Atención Directa</h3>
-            <p className="text-[11px] text-stone-500 mt-1">{business?.phone || '+34 910 123 456'}</p>
+            <p className="text-[11px] text-stone-500 mt-1">{business?.phone || '+503 2200 1234'}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-white border border-stone-200 shadow-2xs">
             <Building2 className="w-5 h-5 text-teal-600 mb-2" />
             <h3 className="font-bold text-xs text-stone-900">Ubicación</h3>
-            <p className="text-[11px] text-stone-500 mt-1">{business?.address || 'Gran Vía 42, Madrid'}</p>
+            <p className="text-[11px] text-stone-500 mt-1">{business?.address || 'Paseo General Escalón #3700, San Salvador'}</p>
           </div>
         </div>
       </main>
@@ -77,7 +77,7 @@ export default async function DemoPage() {
       {channelWeb?.webChatEnabled && (
         <WebChatWidget
           color={channelWeb.webChatColor || '#0d9488'}
-          title={channelWeb.webChatTitle || 'Atención Clínica Lumen'}
+          title={channelWeb.webChatTitle || 'Atención Clínica Dental San Salvador'}
           welcomeMessage={channelWeb.webChatWelcome || '¡Hola! ¿En qué te podemos ayudar?'}
         />
       )}

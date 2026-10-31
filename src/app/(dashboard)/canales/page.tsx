@@ -120,6 +120,7 @@ export default function CanalesPage() {
           setQrCodeData(updated.whatsapp.qrCode);
         } else if (action === 'RESET' || action === 'DISCONNECT') {
           setQrCodeData(null);
+          if (action === 'DISCONNECT') setWaPhone('');
         }
         if (updated.whatsapp.phoneNumber) setWaPhone(updated.whatsapp.phoneNumber);
       }
@@ -298,7 +299,7 @@ export default function CanalesPage() {
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     <div>
                       <p className="text-xs font-bold text-emerald-900">
-                        Dispositivo Vinculado: {waPhone || '+34 Móvil Conectado'}
+                        Dispositivo Vinculado: {waPhone || '+503 Teléfono Conectado'}
                       </p>
                       <p className="text-[11px] text-emerald-700">
                         La sesión está activa y atendiendo mensajes automáticamente.

@@ -12,6 +12,7 @@ import {
   ConversationStatus,
   MessageSender,
 } from '@prisma/client';
+import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 import path from 'path';
 import fs from 'fs';
 import QRCode from 'qrcode';
@@ -22,6 +23,8 @@ let currentQrDataUrl: string | null = null;
 let currentStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
 let connectedPhone: string | null = null;
 let isConnecting = false;
+let reconnectAttempts = 0;
+let reconnectTimeout: NodeJS.Timeout | null = null;
 
 export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
   providerName: WhatsAppProvider = WhatsAppProvider.BAILEYS;
@@ -31,16 +34,32 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     return path.resolve(process.cwd(), sessionDir);
   }
 
-  cleanSessionFolder(): void {
-    const dir = this.getSessionDir();
-    if (fs.existsSync(dir)) {
+  /**
+   * Purgado físico y seguro de los archivos de autenticación en disco.
+   * Itera archivo por archivo para evitar bloqueos EPERM/EBUSY en Windows.
+   */
+  clearAuthFiles(): void {
+    const authDir = this.getSessionDir();
+    if (fs.existsSync(authDir)) {
       try {
-        fs.rmSync(dir, { recursive: true, force: true });
-        console.log('[Baileys] Carpeta de sesión eliminada para reinicio limpio.');
+        const files = fs.readdirSync(authDir);
+        for (const file of files) {
+          try {
+            fs.unlinkSync(path.join(authDir, file));
+          } catch (err) {
+            console.warn(`[Baileys] No se pudo borrar ${file}:`, err);
+          }
+        }
+        console.log('[Baileys] Archivos de sesión purgados exitosamente de disco.');
       } catch (e) {
-        console.error('[Baileys] Error eliminando carpeta de sesión:', e);
+        console.error('[Baileys] Error limpiando directorio de auth:', e);
       }
     }
+  }
+
+  // Compatibilidad hacia atrás
+  cleanSessionFolder(): void {
+    this.clearAuthFiles();
   }
 
   async getStatus(): Promise<WhatsAppStatusInfo> {
@@ -56,7 +75,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
       provider: WhatsAppProvider.BAILEYS,
       status,
       phoneNumber: connectedPhone || channel?.waPhoneNumber,
-      businessName: channel?.waBusinessName || 'Clínica Dental Lumen',
+      businessName: channel?.waBusinessName || 'Clínica Dental San Salvador',
       qrCode: currentQrDataUrl || channel?.baileysQrCode,
     };
   }
@@ -73,13 +92,10 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
     isConnecting = true;
 
     if (forceFresh) {
-      if (baileysSocket) {
-        try {
-          baileysSocket.end();
-        } catch {}
-        baileysSocket = null;
-      }
-      this.cleanSessionFolder();
+      console.log('[Baileys] Solicitado forceFresh: desconectando socket previo y purgando disco...');
+      await this.disconnect();
+      // Pausa de 1 segundo para garantizar que el SO libere los descriptores de archivo
+      await new Promise((r) => setTimeout(r, 1000));
       currentQrDataUrl = null;
       currentStatus = ConnectionStatus.WAITING_QR;
       await this.persistStatus();
@@ -146,26 +162,36 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const isRegistered = !!(state?.creds as any)?.registered;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+          baileysSocket = null;
 
           console.log(`[Baileys] Conexión cerrada (status ${statusCode}, registrado: ${isRegistered}).`);
 
           if (statusCode === DisconnectReason.loggedOut) {
-            console.log('[Baileys] Sesión desvinculada por el usuario (loggedOut).');
+            console.log('[Baileys] Sesión desvinculada por el usuario (loggedOut). Purgando credenciales...');
+            this.clearAuthFiles();
             currentStatus = ConnectionStatus.DISCONNECTED;
             currentQrDataUrl = null;
             connectedPhone = null;
-            this.cleanSessionFolder();
+            isConnecting = false;
+            reconnectAttempts = 0;
             await this.persistStatus();
           } else {
-            // NO BORRAMOS currentQrDataUrl aquí para que el QR en pantalla sea estable
-            console.log('[Baileys] Reconectando sesión para mantener el socket activo...');
-            setTimeout(() => {
+            // Reconexión con Backoff exponencial seguro
+            reconnectAttempts++;
+            const delay = Math.min(2000 * Math.pow(1.5, reconnectAttempts), 30000);
+            console.log(`[Baileys] Reconectando sesión en ${Math.round(delay / 1000)}s (intento ${reconnectAttempts})...`);
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(() => {
               isConnecting = false;
               this.connect(false);
-            }, 2000);
+            }, delay);
           }
         } else if (connection === 'open') {
+          reconnectAttempts = 0;
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
           currentStatus = ConnectionStatus.CONNECTED;
           currentQrDataUrl = null; // Conexión abierta: ya no se necesita QR
           isConnecting = false;
@@ -211,6 +237,14 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
                 waLid: senderJid,
               },
             });
+
+            // Sincronizar nuevo lead en Google Sheets
+            recordLeadInGoogleSheets({
+              name: pushName,
+              phone,
+              channel: 'WHATSAPP_BAILEYS',
+              notes: text ? text.substring(0, 80) : 'Primer contacto Baileys',
+            }).catch(() => {});
 
             // 2. Crear o recuperar conversación
             let conv = await prisma.conversation.findFirst({
@@ -283,15 +317,26 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
   }
 
   async disconnect(): Promise<void> {
-    try {
-      if (baileysSocket) {
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+    reconnectAttempts = 0;
+
+    if (baileysSocket) {
+      try {
+        baileysSocket.ev.removeAllListeners('connection.update');
+        baileysSocket.ev.removeAllListeners('creds.update');
+        baileysSocket.ev.removeAllListeners('messages.upsert');
         await baileysSocket.logout().catch(() => {});
         baileysSocket.end();
-        baileysSocket = null;
+      } catch (err) {
+        console.warn('[Baileys] Error cerrando socket:', err);
       }
-    } catch {}
+      baileysSocket = null;
+    }
 
-    this.cleanSessionFolder();
+    this.clearAuthFiles();
 
     currentStatus = ConnectionStatus.DISCONNECTED;
     currentQrDataUrl = null;

@@ -26,7 +26,7 @@ export default function AjustesPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Datos
-  const [timezone, setTimezone] = useState('Europe/Madrid');
+  const [timezone, setTimezone] = useState('America/El_Salvador');
   const [agencyName, setAgencyName] = useState('Agencia Atendia');
   const [agencyLogo, setAgencyLogo] = useState('');
   const [selectedModel, setSelectedModel] = useState('anthropic/claude-haiku-5.5');
@@ -51,7 +51,7 @@ export default function AjustesPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.business) {
-          setTimezone(data.business.timezone || 'Europe/Madrid');
+          setTimezone(data.business.timezone || 'America/El_Salvador');
           setAgencyName(data.business.agencyName || 'Agencia Atendia');
           setAgencyLogo(data.business.agencyLogo || '');
         }
@@ -292,7 +292,7 @@ export default function AjustesPage() {
               <div className="flex flex-col justify-center items-start sm:items-end">
                 <span className="text-[11px] text-stone-500">Coste estimado de IA al mes:</span>
                 <span className="text-lg font-bold text-teal-700">
-                  {monthlyCostEstimate < 0.01 ? '< 0.01 €' : `~${monthlyCostEstimate.toFixed(2)} €/mes`}
+                  {monthlyCostEstimate < 0.01 ? '< $0.01' : `~$${monthlyCostEstimate.toFixed(2)} USD/mes`}
                 </span>
                 <span className="text-[10px] text-stone-400">
                   {totalMessagesMonth.toLocaleString()} mensajes / mes
@@ -324,7 +324,7 @@ export default function AjustesPage() {
                 className="w-full px-3 py-2 rounded-lg border border-stone-200 text-sm text-stone-700 bg-stone-50"
               />
               <p className="text-[11px] text-stone-400 mt-1">
-                Fijada en <b>Europe/Madrid</b> para citas, recordatorios y resúmenes diarios.
+                Fijada en <b>America/El_Salvador</b> (UTC-6) para citas, recordatorios y resúmenes diarios.
               </p>
             </div>
 

@@ -105,8 +105,8 @@ ${truncatedText}`;
       businessInfo: {
         name: title.split(/[-|–]/)[0]?.trim() || 'Negocio Local',
         activity: 'Servicios profesionales y atención al cliente',
-        address: 'Madrid, España',
-        phone: '+34 910 000 000',
+        address: 'San Salvador, El Salvador',
+        phone: '+503 2200 0000',
       },
       services: [
         {

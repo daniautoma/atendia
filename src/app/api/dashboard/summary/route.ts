@@ -71,6 +71,7 @@ export async function GET() {
         status: a.status,
         contactName: a.contact.name,
         contactPhone: a.contact.phone,
+        googleCalendarEventId: a.googleCalendarEventId,
       })),
       recentLogs: recentLogs.map((l) => ({
         id: l.id,

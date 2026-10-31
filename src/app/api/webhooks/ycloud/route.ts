@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyYCloudWebhookSignature } from '@/lib/channels/whatsapp/ycloud-signature';
 import { decrypt } from '@/lib/crypto';
 import { LogStatus, MessageSender, ChannelType, WhatsAppProvider } from '@prisma/client';
+import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 
 export async function POST(req: Request) {
   try {
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     // 6. Procesar mensaje entrante si es whatsapp.inbound_message.received
     if (eventType === 'whatsapp.inbound_message.received' && payload.whatsappInboundMessage) {
       const inbound = payload.whatsappInboundMessage;
-      const fromPhone = inbound.from; // Número internacional (ej: "+34600111222")
+      const fromPhone = inbound.from; // Número internacional (ej: "+50371234567")
       const text = inbound.text?.body || '';
       const bsuid = inbound.customerProfile?.id || inbound.from; // BSUID oficial de YCloud / Meta
       const customerName = inbound.customerProfile?.name || 'Cliente WhatsApp';
@@ -107,6 +108,14 @@ export async function POST(req: Request) {
           ycloudBsuid: bsuid,
         },
       });
+
+      // Sincronizar automáticamente nuevo lead a Google Sheets
+      recordLeadInGoogleSheets({
+        name: customerName,
+        phone: fromPhone,
+        channel: 'WHATSAPP_YCLOUD',
+        notes: text ? text.substring(0, 80) : 'Primer contacto YCloud',
+      }).catch(() => {});
 
       // Crear o recuperar conversación activa
       let conversation = await prisma.conversation.findFirst({

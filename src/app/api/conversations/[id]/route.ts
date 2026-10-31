@@ -75,12 +75,13 @@ export async function POST(
       return NextResponse.json({ success: true, conversation: updated });
     }
 
-    // 3. Enviar mensaje manual escrito por una persona del equipo
-    if (text && typeof text === 'string') {
+    // 3. Enviar mensaje manual escrito por una persona del equipo (SEND_MESSAGE)
+    if ((action === 'SEND_MESSAGE' || !action) && text && typeof text === 'string') {
       const createdMsg = await prisma.message.create({
         data: {
           conversationId: id,
           sender: MessageSender.AGENT,
+          senderName: session.name,
           text,
         },
       });

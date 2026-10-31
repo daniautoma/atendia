@@ -62,12 +62,12 @@ model User {
 
 model BusinessProfile {
   id              String   @id @default(cuid())
-  name            String   @default("Clínica Dental Lumen")
-  activity        String   @default("Odontología integral y estética dental")
-  address         String   @default("Calle Gran Vía 42, 2º B, 28013 Madrid")
-  phone           String   @default("+34 910 123 456")
-  website         String   @default("https://clinicalumen.es")
-  timezone        String   @default("Europe/Madrid")
+  name            String   @default("Clínica Dental San Salvador")
+  activity        String   @default("Odontología integral y diseño de sonrisa")
+  address         String   @default("Paseo General Escalón #3700, Colonia Escalón, San Salvador")
+  phone           String   @default("+503 2200 1234")
+  website         String   @default("https://dentalsansalvador.sv")
+  timezone        String   @default("America/El_Salvador")
   assistantActive Boolean  @default(true)
   agencyName      String   @default("Agencia Atendia")
   agencyLogo      String?
@@ -77,10 +77,10 @@ model BusinessProfile {
 
 model AssistantConfig {
   id                   String   @id @default(cuid())
-  name                 String   @default("LumenIA")
+  name                 String   @default("DentalIA")
   avatarUrl            String?
   tone                 String   @default("cercano") // cercano, profesional, directo
-  welcomeMessage       String   @default("¡Hola! Bienvenido a Clínica Dental Lumen. ¿En qué te podemos ayudar hoy?")
+  welcomeMessage       String   @default("¡Hola! Bienvenido a Clínica Dental San Salvador. ¿En qué te podemos ayudar hoy?")
   customInstructions   String   @default("Sé amable y empático. Si un paciente tiene dolor urgente, ofrécele una cita de urgencia para hoy mismo.")
   neverDoList          String   @default("No dar diagnósticos médicos definitivos. No prometer precios sin valoración previa. No atender fuera de horario sin ofrecer cita.")
   businessHours        Json     // Horario L-D
@@ -193,6 +193,7 @@ model Message {
   conversationId String
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         MessageSender
+  senderName     String?       // Nombre del agente humano o emisor para trazabilidad
   text           String
   toolCalls      Json?         // Registro de tools invocadas para este mensaje
   externalId     String?       // ID del mensaje en Baileys o YCloud (para idempotencia)

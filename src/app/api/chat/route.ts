@@ -4,6 +4,7 @@ import { buildSystemPrompt } from '@/lib/prompt-builder';
 import { callOpenRouter, OpenRouterMessage } from '@/lib/ai/openrouter';
 import { ASSISTANT_TOOLS, executeToolCall } from '@/lib/ai/tools';
 import { MessageSender, ChannelType } from '@prisma/client';
+import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 
 export async function POST(req: Request) {
   try {
@@ -39,6 +40,16 @@ export async function POST(req: Request) {
           email: contactInfo?.email || null,
         },
       });
+
+      if (contactInfo?.phone || contactInfo?.email || contactInfo?.name) {
+        recordLeadInGoogleSheets({
+          name: contactInfo?.name || 'Visitante Web',
+          phone: contactInfo?.phone || null,
+          email: contactInfo?.email || null,
+          channel: 'WEB_CHAT',
+          notes: 'Contacto registrado desde el widget de chat web',
+        }).catch(() => {});
+      }
     }
 
     // 2. Recuperar o crear conversación
@@ -97,13 +108,13 @@ export async function POST(req: Request) {
     ]);
 
     const systemPrompt = buildSystemPrompt({
-      assistantName: assistant?.name || 'LumenIA',
-      businessName: business?.name || 'Clínica Dental Lumen',
-      activity: business?.activity || 'Odontología integral en Madrid',
-      address: business?.address || 'Gran Vía 42, Madrid',
-      phone: business?.phone || '+34 910 123 456',
-      website: business?.website || 'https://clinicalumen.es',
-      timezone: business?.timezone || 'Europe/Madrid',
+      assistantName: assistant?.name || 'DentalIA',
+      businessName: business?.name || 'Clínica Dental San Salvador',
+      activity: business?.activity || 'Odontología integral y diseño de sonrisa',
+      address: business?.address || 'Paseo General Escalón #3700, San Salvador',
+      phone: business?.phone || '+503 2200 1234',
+      website: business?.website || 'https://dentalsansalvador.sv',
+      timezone: business?.timezone || 'America/El_Salvador',
       tone: assistant?.tone || 'cercano',
       welcomeMessage: assistant?.welcomeMessage || '',
       customInstructions: assistant?.customInstructions || '',

@@ -509,7 +509,7 @@ export default function ComportamientoPage() {
                 })
               }
               className="w-full px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Ej: Si el paciente pide presupuestos de más de 3.000€ o financiación bancaria compleja..."
+              placeholder="Ej: Si el paciente pide presupuestos de más de $3,000 o financiamiento bancario complejo..."
             />
           </div>
         </section>

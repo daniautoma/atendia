@@ -13,36 +13,52 @@ import {
   MessageSquare,
   Activity,
   Settings,
+  Calendar,
   ExternalLink,
   LogOut,
   Building2,
+  UserCheck,
+  Shield,
 } from 'lucide-react';
 
 interface SidebarProps {
   businessName?: string;
   assistantActive?: boolean;
   agencyName?: string;
+  userRole?: string;
+  userName?: string;
 }
 
 export function Sidebar({
-  businessName = 'Clínica Dental Lumen',
+  businessName = 'Clínica Dental San Salvador',
   assistantActive = true,
   agencyName = 'Agencia Atendia',
+  userRole = 'AGENT',
+  userName = 'Usuario',
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navItems = [
-    { label: 'Resumen', href: '/', icon: LayoutDashboard },
-    { label: 'Comportamiento', href: '/comportamiento', icon: Bot },
-    { label: 'Conocimiento', href: '/conocimiento', icon: BookOpen },
-    { label: 'Integraciones', href: '/integraciones', icon: Blocks },
-    { label: 'Canales', href: '/canales', icon: Share2 },
-    { label: 'Probar', href: '/probar', icon: Sparkles },
-    { label: 'Conversaciones', href: '/conversaciones', icon: MessageSquare },
-    { label: 'Actividad', href: '/actividad', icon: Activity },
-    { label: 'Ajustes', href: '/ajustes', icon: Settings },
+  const isAgent = userRole === 'AGENT';
+
+  // Catálogo completo de navegación
+  const allNavItems = [
+    { label: 'Resumen', href: '/', icon: LayoutDashboard, adminOnly: true },
+    { label: 'Conversaciones', href: '/conversaciones', icon: MessageSquare, adminOnly: false },
+    { label: 'Calendario', href: '/calendario', icon: Calendar, adminOnly: false },
+    { label: 'Conocimiento', href: '/conocimiento', icon: BookOpen, adminOnly: false },
+    { label: 'Comportamiento', href: '/comportamiento', icon: Bot, adminOnly: true },
+    { label: 'Integraciones', href: '/integraciones', icon: Blocks, adminOnly: true },
+    { label: 'Canales', href: '/canales', icon: Share2, adminOnly: true },
+    { label: 'Probar', href: '/probar', icon: Sparkles, adminOnly: true },
+    { label: 'Actividad', href: '/actividad', icon: Activity, adminOnly: true },
+    { label: 'Ajustes', href: '/ajustes', icon: Settings, adminOnly: true },
   ];
+
+  // Si es AGENT, solo puede ver Conversaciones, Calendario y Conocimiento
+  const visibleNavItems = isAgent
+    ? allNavItems.filter((item) => !item.adminOnly)
+    : allNavItems;
 
   const handleLogout = async () => {
     try {
@@ -89,9 +105,9 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Navegación Principal */}
+      {/* Navegación Principal Filtrada por Rol */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
@@ -111,12 +127,32 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Pie con Demo y Logout */}
-      <div className="p-3 border-t border-stone-800 space-y-1">
+      {/* Pie con Perfil de Usuario, Demo y Logout */}
+      <div className="p-3 border-t border-stone-800 space-y-2">
+        {/* Ficha de identidad y rol del usuario */}
+        <div className="px-3 py-2 rounded-lg bg-stone-800/50 border border-stone-800 flex items-center justify-between">
+          <div className="truncate pr-2">
+            <p className="text-xs font-semibold text-stone-200 truncate">{userName}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              {isAgent ? (
+                <span className="inline-flex items-center gap-1 text-[10px] text-purple-300 bg-purple-950/60 px-1.5 py-0.2 rounded font-medium border border-purple-800/40">
+                  <UserCheck className="w-2.5 h-2.5" />
+                  Agente
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] text-teal-300 bg-teal-950/60 px-1.5 py-0.2 rounded font-medium border border-teal-800/40">
+                  <Shield className="w-2.5 h-2.5" />
+                  Admin
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         <Link
           href="/demo"
           target="_blank"
-          className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-stone-300 hover:text-white hover:bg-stone-800/70 transition-colors"
+          className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium text-stone-300 hover:text-white hover:bg-stone-800/70 transition-colors"
         >
           <span className="flex items-center gap-2">
             <ExternalLink className="w-3.5 h-3.5 text-teal-400" />
@@ -127,7 +163,7 @@ export function Sidebar({
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 transition-colors cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>Cerrar sesión</span>
@@ -136,4 +172,3 @@ export function Sidebar({
     </aside>
   );
 }
-

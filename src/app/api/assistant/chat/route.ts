@@ -29,14 +29,14 @@ export async function POST(req: Request) {
       timestamp: string;
     }> = [];
 
-    const nowMadrid = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' });
+    const nowSV = new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' });
 
     // 1. Mensaje recibido
     timeline.push({
       step: 'INBOUND',
       title: `Mensaje recibido (${simulateChannel})`,
       detail: { text: message, safeMode },
-      timestamp: nowMadrid,
+      timestamp: nowSV,
     });
 
     // 2. Obtener contexto de configuración
@@ -49,13 +49,13 @@ export async function POST(req: Request) {
     ]);
 
     const systemPrompt = buildSystemPrompt({
-      assistantName: assistant?.name || 'LumenIA',
-      businessName: business?.name || 'Clínica Dental Lumen',
-      activity: business?.activity || 'Odontología integral y estética dental',
-      address: business?.address || 'Calle Gran Vía 42, Madrid',
-      phone: business?.phone || '+34 910 123 456',
-      website: business?.website || 'https://clinicalumen.es',
-      timezone: business?.timezone || 'Europe/Madrid',
+      assistantName: assistant?.name || 'DentalIA',
+      businessName: business?.name || 'Clínica Dental San Salvador',
+      activity: business?.activity || 'Odontología integral y diseño de sonrisa',
+      address: business?.address || 'Paseo General Escalón #3700, San Salvador',
+      phone: business?.phone || '+503 2200 1234',
+      website: business?.website || 'https://dentalsansalvador.sv',
+      timezone: business?.timezone || 'America/El_Salvador',
       tone: assistant?.tone || 'cercano',
       welcomeMessage: assistant?.welcomeMessage || '',
       customInstructions: assistant?.customInstructions || '',
@@ -70,14 +70,14 @@ export async function POST(req: Request) {
 
     timeline.push({
       step: 'PROMPT_COMPILED',
-      title: 'Contexto estructurado en zona horaria Europe/Madrid',
+      title: 'Contexto estructurado en zona horaria America/El_Salvador',
       detail: {
         servicesCount: services.length,
         faqsCount: faqs.length,
         promptLengthChars: systemPrompt.length,
         model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
       },
-      timestamp: nowMadrid,
+      timestamp: nowSV,
     });
 
     // 3. Preparar array de mensajes (con últimos 20 turnos de historial)
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
           step: 'FALLBACK_TRIGGERED',
           title: `Fallback activado: ${completion.modelUsed}`,
           detail: { originalModel: model, fallbackModel },
-          timestamp: nowMadrid,
+          timestamp: nowSV,
         });
       }
 
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
             step: 'TOOL_INVOKED',
             title: `Llamada a herramienta: ${toolName}`,
             detail: { args: toolArgs, safeMode },
-            timestamp: nowMadrid,
+            timestamp: nowSV,
           });
 
           // Ejecutar la herramienta
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
             step: 'TOOL_RESULT',
             title: `Resultado de ${toolName}`,
             detail: toolResult.result,
-            timestamp: nowMadrid,
+            timestamp: nowSV,
           });
 
           // Registrar en ActivityLog
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
       step: 'RESPONSE_READY',
       title: 'Respuesta generada para el cliente',
       detail: { textLength: finalAssistantText.length, toolCallsCount: executedTools.length },
-      timestamp: nowMadrid,
+      timestamp: nowSV,
     });
 
     return NextResponse.json({

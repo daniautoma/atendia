@@ -25,11 +25,11 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
       })
       .catch(() => {});
 
-    // Actualizar reloj en hora de Madrid
+    // Actualizar reloj en hora de El Salvador (UTC-6)
     const updateClock = () => {
       const now = new Date();
-      const timeStr = new Intl.DateTimeFormat('es-ES', {
-        timeZone: 'Europe/Madrid',
+      const timeStr = new Intl.DateTimeFormat('es-SV', {
+        timeZone: 'America/El_Salvador',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -69,10 +69,10 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Hora oficial en Madrid */}
+        {/* Hora oficial en El Salvador */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 text-stone-600 text-xs font-mono">
           <Clock className="w-3.5 h-3.5 text-stone-400" />
-          <span>Madrid: {currentTime || '...'}</span>
+          <span>El Salvador: {currentTime || '...'}</span>
         </div>
 
         {/* Interruptor General del Asistente */}

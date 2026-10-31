@@ -32,6 +32,26 @@ export default function ConversacionesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const prevMessagesCountRef = useRef(0);
+  const prevWaitingCountRef = useRef(0);
+
+  const playChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  };
 
   const fetchList = async () => {
     try {
@@ -39,6 +59,12 @@ export default function ConversacionesPage() {
       const data = await res.json();
       if (data.conversations) {
         setConversations(data.conversations);
+        const currentWaiting = data.conversations.filter((c: any) => c.status === 'WAITING_HUMAN').length;
+        if (currentWaiting > prevWaitingCountRef.current && prevWaitingCountRef.current !== 0) {
+          playChime();
+        }
+        prevWaitingCountRef.current = currentWaiting;
+
         if (!selectedId && data.conversations.length > 0) {
           setSelectedId(data.conversations[0].id);
         }
@@ -111,7 +137,7 @@ export default function ConversacionesPage() {
       const res = await fetch(`/api/conversations/${selectedId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, action: 'SEND_MESSAGE' }),
       });
       if (res.ok) {
         fetchActiveConversation(selectedId);
@@ -124,12 +150,33 @@ export default function ConversacionesPage() {
     setExpandedTools((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
   };
 
+  const waitingCount = conversations.filter((c) => c.status === 'WAITING_HUMAN').length;
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Bandeja de Conversaciones"
-        subtitle="Atención omnicanal unificada: supervisa a LumenIA y toma el control humano cuando sea necesario"
+        subtitle="Atención omnicanal unificada: supervisa a DentalIA y toma el control humano cuando sea necesario"
       />
+
+      {/* Alerta Visual de Pase a Humano */}
+      {waitingCount > 0 && (
+        <div className="bg-amber-600 text-white px-5 py-2 text-xs font-semibold flex items-center justify-between shrink-0 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-200"></span>
+            </span>
+            <span>¡Atención requerida! Hay {waitingCount} conversación(es) esperando respuesta humana</span>
+          </div>
+          <button
+            onClick={() => setFilter('needs_attention')}
+            className="underline hover:text-amber-100 cursor-pointer text-[11px] font-bold"
+          >
+            Filtrar pendientes
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* COLUMNA IZQUIERDA: LISTA DE CONVERSACIONES */}
@@ -192,10 +239,10 @@ export default function ConversacionesPage() {
                         )}
                       </div>
                       <span className="text-[10px] text-stone-400">
-                        {new Date(c.lastMessageAt).toLocaleTimeString('es-ES', {
+                        {new Date(c.lastMessageAt).toLocaleTimeString('es-SV', {
                           hour: '2-digit',
                           minute: '2-digit',
-                          timeZone: 'Europe/Madrid',
+                          timeZone: 'America/El_Salvador',
                         })}
                       </span>
                     </div>
@@ -290,14 +337,19 @@ export default function ConversacionesPage() {
                     >
                       <div className="flex items-center gap-1.5 text-[10px] text-stone-400 mb-1 px-1">
                         {isCustomer && <span className="font-semibold text-stone-600">Paciente</span>}
-                        {isAssistant && <span className="font-semibold text-teal-700 flex items-center gap-1"><Bot className="w-2.5 h-2.5" /> LumenIA</span>}
-                        {isAgent && <span className="font-semibold text-purple-700 flex items-center gap-1"><User className="w-2.5 h-2.5" /> Agente Humano</span>}
+                        {isAssistant && <span className="font-semibold text-teal-700 flex items-center gap-1"><Bot className="w-2.5 h-2.5" /> DentalIA</span>}
+                        {isAgent && (
+                          <span className="font-semibold text-purple-700 flex items-center gap-1">
+                            <User className="w-2.5 h-2.5" />
+                            {m.senderName ? `Enviado por ${m.senderName}` : 'Agente Humano'}
+                          </span>
+                        )}
                         <span>•</span>
                         <span>
-                          {new Date(m.createdAt).toLocaleTimeString('es-ES', {
+                          {new Date(m.createdAt).toLocaleTimeString('es-SV', {
                             hour: '2-digit',
                             minute: '2-digit',
-                            timeZone: 'Europe/Madrid',
+                            timeZone: 'America/El_Salvador',
                           })}
                         </span>
                       </div>
