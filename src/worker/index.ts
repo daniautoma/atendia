@@ -104,7 +104,7 @@ async function handleInboundMessageJob(payload: {
     prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        messages: { take: 20, orderBy: { createdAt: 'asc' } },
+        messages: { take: 25, orderBy: { createdAt: 'desc' } },
         contact: true,
       },
     }),
@@ -194,59 +194,93 @@ async function handleInboundMessageJob(payload: {
     systemPromptOverride: assistant?.systemPromptOverride,
   });
 
-  const historyMessages = (conversation.messages || []).map((m) => ({
+  // Invertir para tener orden cronológico de los mensajes más recientes
+  const chronologicalDbMessages = (conversation.messages || []).reverse();
+
+  const formattedHistory: OpenRouterMessage[] = chronologicalDbMessages.map((m) => ({
     role: m.sender === 'CUSTOMER' ? ('user' as const) : ('assistant' as const),
     content: m.text,
   }));
 
+  // Garantizar que el mensaje recién recibido del paciente esté al final del historial
+  const lastHistoryMsg = formattedHistory[formattedHistory.length - 1];
+  if (!lastHistoryMsg || lastHistoryMsg.role !== 'user' || lastHistoryMsg.content !== payload.text) {
+    formattedHistory.push({ role: 'user', content: payload.text });
+  }
+
   const messages: OpenRouterMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...historyMessages,
+    ...formattedHistory,
   ];
 
+  const model = assistant?.aiModel || 'openai/gpt-4o-mini';
+  const fallbackModel = assistant?.aiModelFallback || 'openai/gpt-4o-mini';
+
+  let currentTurn = 0;
+  const maxToolIterations = 5;
+  const executedTools: string[] = [];
   let finalAssistantText = '';
-  const completion = await callOpenRouter({
-    model: assistant?.aiModel || 'openai/gpt-4o-mini',
-    fallbackModel: assistant?.aiModelFallback || 'openai/gpt-4o-mini',
-    messages,
-    tools: ASSISTANT_TOOLS,
-  });
+  let lastCompletion: any = null;
 
-  let executedTools = [];
-  if (completion.message.tool_calls && completion.message.tool_calls.length > 0) {
-    for (const call of completion.message.tool_calls) {
-      let args: any = {};
-      try {
-        args = JSON.parse(call.function.arguments || '{}');
-      } catch {}
+  while (currentTurn < maxToolIterations) {
+    currentTurn++;
 
-      const toolRes = await executeToolCall(call.function.name, args, {
-        safeMode: false,
-        conversationId: conversation.id,
-        contactId,
-      });
+    const completion = await callOpenRouter({
+      model,
+      fallbackModel,
+      messages,
+      tools: ASSISTANT_TOOLS,
+      temperature: 0.2,
+    });
+    lastCompletion = completion;
 
-      executedTools.push(call.function.name);
-      messages.push(completion.message);
-      messages.push({
-        role: 'tool' as any,
-        tool_call_id: call.id,
-        name: call.function.name,
-        content: JSON.stringify(toolRes.result),
-      });
+    const assistantMsg = completion.message;
+    messages.push(assistantMsg);
+
+    // Si el modelo solicita ejecutar herramientas
+    if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
+      for (const call of assistantMsg.tool_calls) {
+        const toolName = call.function.name;
+        let toolArgs: any = {};
+        try {
+          toolArgs = JSON.parse(call.function.arguments || '{}');
+        } catch {
+          toolArgs = {};
+        }
+
+        const toolRes = await executeToolCall(toolName, toolArgs, {
+          safeMode: false,
+          conversationId: conversation.id,
+          contactId,
+        });
+
+        executedTools.push(toolName);
+
+        messages.push({
+          role: 'tool' as any,
+          tool_call_id: call.id,
+          name: toolName,
+          content: JSON.stringify(toolRes.result),
+        });
+      }
+      // Reingresar al bucle para que el modelo genere su respuesta analizando el resultado de la herramienta
+      continue;
     }
 
-    const secondPass = await callOpenRouter({
-      model: assistant?.aiModel || 'openai/gpt-4o-mini',
-      messages,
-    });
-    finalAssistantText = secondPass.message.content || 'He consultado tu solicitud.';
-  } else {
-    finalAssistantText = completion.message.content || '¿En qué te puedo ayudar hoy?';
+    // Si no hubo llamadas a herramientas, la respuesta conversacional está lista
+    finalAssistantText = assistantMsg.content || '¿En qué te puedo ayudar hoy?';
+    break;
+  }
+
+  if (!finalAssistantText && lastCompletion?.message?.content) {
+    finalAssistantText = lastCompletion.message.content;
+  }
+  if (!finalAssistantText) {
+    finalAssistantText = 'He consultado tu solicitud. ¿Hay algo más en lo que te pueda ayudar?';
   }
 
   // Si se activó respuesta de contingencia por falta de clave o fallo de proveedor, derivar a humano
-  if (completion.modelUsed.startsWith('sistema/')) {
+  if (lastCompletion?.modelUsed?.startsWith('sistema/')) {
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: {

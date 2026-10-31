@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         channel: ChannelType.WEB,
       },
       orderBy: { updatedAt: 'desc' },
-      include: { messages: { take: 15, orderBy: { createdAt: 'asc' } } },
+      include: { messages: { take: 25, orderBy: { createdAt: 'desc' } } },
     });
 
     if (!conversation) {
@@ -176,54 +176,86 @@ export async function POST(req: Request) {
       systemPromptOverride: assistant?.systemPromptOverride,
     });
 
-    const historyMessages = (conversation.messages || []).map((m) => ({
+    // Invertir para tener orden cronológico de los mensajes más recientes
+    const chronologicalDbMessages = (conversation.messages || []).reverse();
+
+    const formattedHistory: OpenRouterMessage[] = chronologicalDbMessages.map((m) => ({
       role: m.sender === 'CUSTOMER' ? ('user' as const) : ('assistant' as const),
       content: m.text,
     }));
 
+    // Garantizar que el mensaje recién recibido del paciente esté al final del historial
+    const lastHistoryMsg = formattedHistory[formattedHistory.length - 1];
+    if (!lastHistoryMsg || lastHistoryMsg.role !== 'user' || lastHistoryMsg.content !== message) {
+      formattedHistory.push({ role: 'user', content: message });
+    }
+
     const messages: OpenRouterMessage[] = [
       { role: 'system', content: systemPrompt },
-      ...historyMessages,
-      { role: 'user', content: message },
+      ...formattedHistory,
     ];
 
+    const model = assistant?.aiModel || 'openai/gpt-4o-mini';
+    const fallbackModel = assistant?.aiModelFallback || 'openai/gpt-4o-mini';
+
+    let currentTurn = 0;
+    const maxToolIterations = 5;
+    const executedTools: string[] = [];
     let finalAssistantText = '';
-    const completion = await callOpenRouter({
-      model: assistant?.aiModel || 'openai/gpt-4o-mini',
-      fallbackModel: assistant?.aiModelFallback || 'openai/gpt-4o-mini',
-      messages,
-      tools: ASSISTANT_TOOLS,
-    });
+    let lastCompletion: any = null;
 
-    if (completion.message.tool_calls && completion.message.tool_calls.length > 0) {
-      for (const call of completion.message.tool_calls) {
-        let args: any = {};
-        try {
-          args = JSON.parse(call.function.arguments || '{}');
-        } catch {}
+    while (currentTurn < maxToolIterations) {
+      currentTurn++;
 
-        const toolRes = await executeToolCall(call.function.name, args, {
-          safeMode: false,
-          conversationId: conversation.id,
-          contactId: contact.id,
-        });
+      const completion = await callOpenRouter({
+        model,
+        fallbackModel,
+        messages,
+        tools: ASSISTANT_TOOLS,
+        temperature: 0.2,
+      });
+      lastCompletion = completion;
 
-        messages.push(completion.message);
-        messages.push({
-          role: 'tool' as any,
-          tool_call_id: call.id,
-          name: call.function.name,
-          content: JSON.stringify(toolRes.result),
-        });
+      const assistantMsg = completion.message;
+      messages.push(assistantMsg);
+
+      if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
+        for (const call of assistantMsg.tool_calls) {
+          const toolName = call.function.name;
+          let toolArgs: any = {};
+          try {
+            toolArgs = JSON.parse(call.function.arguments || '{}');
+          } catch {
+            toolArgs = {};
+          }
+
+          const toolRes = await executeToolCall(toolName, toolArgs, {
+            safeMode: false,
+            conversationId: conversation.id,
+            contactId: contact.id,
+          });
+
+          executedTools.push(toolName);
+
+          messages.push({
+            role: 'tool' as any,
+            tool_call_id: call.id,
+            name: toolName,
+            content: JSON.stringify(toolRes.result),
+          });
+        }
+        continue;
       }
 
-      const secondPass = await callOpenRouter({
-        model: assistant?.aiModel || 'openai/gpt-4o-mini',
-        messages,
-      });
-      finalAssistantText = secondPass.message.content || 'He consultado tus datos con el equipo.';
-    } else {
-      finalAssistantText = completion.message.content || '¿En qué más te puedo ayudar hoy?';
+      finalAssistantText = assistantMsg.content || '¿En qué te puedo ayudar hoy?';
+      break;
+    }
+
+    if (!finalAssistantText && lastCompletion?.message?.content) {
+      finalAssistantText = lastCompletion.message.content;
+    }
+    if (!finalAssistantText) {
+      finalAssistantText = 'He consultado tu solicitud. ¿Hay algo más en lo que te pueda ayudar?';
     }
 
     // Guardar respuesta del asistente
@@ -232,6 +264,7 @@ export async function POST(req: Request) {
         conversationId: conversation.id,
         sender: MessageSender.ASSISTANT,
         text: finalAssistantText,
+        toolCalls: executedTools.length > 0 ? executedTools : undefined,
       },
     });
 
