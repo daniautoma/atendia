@@ -143,12 +143,14 @@ export async function POST(req: Request) {
       console.warn('[Appointments API] Error al sincronizar con Google Calendar:', gcalErr?.message);
     }
 
-    // 5. Integración Google Sheets: guardar lead y cita en el CRM
+    // 5. Integración Google Sheets: guardar lead y actualizar a Cita Agendada en el CRM
     recordLeadInGoogleSheets({
       name: patientName,
       phone: phone || null,
       email: email || null,
       channel: 'PANEL_MANUAL',
+      service: serviceName,
+      status: 'Cita Agendada',
       notes: `Cita: ${serviceName} el ${start.toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`,
     }).catch(() => {});
 

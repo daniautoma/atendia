@@ -13,6 +13,7 @@ import {
   MessageSender,
 } from '@prisma/client';
 import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
+import { extractWhatsAppPhoneAndLid } from '@/lib/phone';
 import path from 'path';
 import fs from 'fs';
 import QRCode from 'qrcode';
@@ -217,32 +218,48 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
             '';
           if (!text.trim()) continue;
 
-          const rawNumber = senderJid.split('@')[0].replace(/\D/g, '');
-          const phone = '+' + rawNumber;
+          const { phone, waLid, replyJid } = extractWhatsAppPhoneAndLid(msg.key);
           const pushName = msg.pushName || 'Cliente WhatsApp';
 
           try {
-            console.log(`[Baileys] Mensaje entrante de ${phone} (${pushName}): "${text}"`);
+            console.log(`[Baileys] Mensaje entrante de ${phone || waLid || replyJid} (${pushName}): "${text}"`);
 
-            // 1. Crear o actualizar contacto guardando su senderJid en waLid
-            const contact = await prisma.contact.upsert({
-              where: { phone },
-              update: {
-                name: pushName,
-                waLid: senderJid,
-              },
-              create: {
-                name: pushName,
-                phone,
-                waLid: senderJid,
-              },
-            });
+            // 1. Crear o actualizar contacto unificado
+            let contact = null;
+            if (phone) {
+              contact = await prisma.contact.findUnique({ where: { phone } });
+            }
+            if (!contact && waLid) {
+              contact = await prisma.contact.findFirst({ where: { waLid } });
+            }
 
-            // Sincronizar nuevo lead en Google Sheets
+            if (contact) {
+              contact = await prisma.contact.update({
+                where: { id: contact.id },
+                data: {
+                  name: contact.name && contact.name !== 'Cliente WhatsApp' ? contact.name : pushName,
+                  waLid: waLid || replyJid || contact.waLid,
+                  // Actualizar teléfono solo si no tenía o si ahora tenemos uno real y válido
+                  phone: phone && !contact.phone ? phone : contact.phone,
+                },
+              });
+            } else {
+              contact = await prisma.contact.create({
+                data: {
+                  name: pushName,
+                  phone: phone || undefined,
+                  waLid: waLid || replyJid,
+                },
+              });
+            }
+
+            // Sincronizar nuevo lead en Google Sheets con estado "Lead / Consultando"
             recordLeadInGoogleSheets({
-              name: pushName,
-              phone,
+              name: contact.name || pushName,
+              phone: phone || contact.phone,
               channel: 'WHATSAPP_BAILEYS',
+              service: 'Consulta general',
+              status: 'Lead / Consultando',
               notes: text ? text.substring(0, 80) : 'Primer contacto Baileys',
             }).catch(() => {});
 
@@ -295,7 +312,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
                   contactId: contact.id,
                   channel: 'WHATSAPP',
                   text,
-                  to: phone,
+                  to: phone || contact.phone || waLid || replyJid,
                 },
                 scheduledFor,
               },

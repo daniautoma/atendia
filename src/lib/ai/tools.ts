@@ -6,6 +6,7 @@ import { createGoogleCalendarEvent } from '@/lib/integrations/google/calendar';
 import { sendGmailEmail } from '@/lib/integrations/google/gmail';
 import { createStripePaymentLink } from '@/lib/integrations/stripe';
 import { dispatchOutgoingWebhook } from '@/lib/integrations/webhooks';
+import { validateAndNormalizeElSalvadorPhone } from '@/lib/phone';
 
 export const ASSISTANT_TOOLS = [
   {
@@ -33,18 +34,18 @@ export const ASSISTANT_TOOLS = [
     type: 'function',
     function: {
       name: 'agendar_cita',
-      description: 'Agenda y reserva una cita en la clínica. IMPORTANTE: Requiere que el cliente haya confirmado explícitamente el día y la hora.',
+      description: 'Agenda y reserva una cita en la clínica. IMPORTANTE: Requiere que el cliente haya confirmado explícitamente el día, la hora, su nombre completo y un número de teléfono válido de El Salvador (+503 de 8 dígitos).',
       parameters: {
         type: 'object',
         properties: {
           nombre_cliente: { type: 'string', description: 'Nombre completo del paciente' },
-          telefono: { type: 'string', description: 'Teléfono de contacto (+503...)' },
+          telefono: { type: 'string', description: 'Teléfono de contacto de El Salvador (+503... o número de 8 dígitos ej: 70123444)' },
           email: { type: 'string', description: 'Correo electrónico del paciente para confirmación (opcional)' },
           servicio: { type: 'string', description: 'Nombre del servicio solicitado' },
           fecha_hora: { type: 'string', description: 'Fecha y hora en formato ISO o YYYY-MM-DDTHH:mm' },
           confirmado_por_cliente: { type: 'boolean', description: 'Debe ser true tras confirmación expresa del cliente' },
         },
-        required: ['nombre_cliente', 'servicio', 'fecha_hora', 'confirmado_por_cliente'],
+        required: ['nombre_cliente', 'telefono', 'servicio', 'fecha_hora', 'confirmado_por_cliente'],
       },
     },
   },
@@ -177,39 +178,62 @@ export async function executeToolCall(
           };
         }
 
+        // Obtener contacto actual si existe
+        let contact = ctx.contactId
+          ? await prisma.contact.findUnique({ where: { id: ctx.contactId } })
+          : null;
+
+        // Validación estricta del número de teléfono para El Salvador (+503 de 8 dígitos)
+        const candidatePhone = args.telefono || contact?.phone;
+        const phoneValidation = validateAndNormalizeElSalvadorPhone(candidatePhone);
+
+        if (!phoneValidation.isValid || !phoneValidation.phone) {
+          return {
+            result: {
+              error: 'TELEFONO_INVALIDO',
+              mensaje: `El número de teléfono "${candidatePhone || 'no proporcionado'}" no es válido. En El Salvador debe ser un número de 8 dígitos con prefijo +503 (ejemplo: +503 7012 3444 o 70123444). Por favor pídele amablemente al paciente que te proporcione su número de teléfono correcto para poder confirmar y agendar la cita.`,
+            },
+            summary: `Rechazado: Teléfono inválido (${candidatePhone || 'vacío'}). Se requiere formato válido de El Salvador (+503 de 8 dígitos).`,
+          };
+        }
+
+        const validPhone = phoneValidation.phone;
+
         if (ctx.safeMode) {
           return {
             result: {
               status: 'SIMULATED',
               modoSeguro: true,
-              mensaje: `[MODO SEGURO ACTIVO] Simulación exitosa de cita para ${args.nombre_cliente} (${args.servicio}) el ${args.fecha_hora}. Ningún evento real fue creado ni se alteraron agendas externas.`,
+              telefono: validPhone,
+              mensaje: `[MODO SEGURO ACTIVO] Simulación exitosa de cita para ${args.nombre_cliente} (${args.servicio}) el ${args.fecha_hora}. Teléfono verificado: ${validPhone}. Ningún evento real fue creado ni se alteraron agendas externas.`,
             },
-            summary: `[MODO SEGURO] Simulación de cita para ${args.nombre_cliente} - ${args.servicio} (${args.fecha_hora}).`,
+            summary: `[MODO SEGURO] Simulación de cita para ${args.nombre_cliente} - ${args.servicio} (${args.fecha_hora}) [${validPhone}].`,
           };
         }
 
-        // Crear cita real en base de datos
-        let contact = ctx.contactId
-          ? await prisma.contact.findUnique({ where: { id: ctx.contactId } })
-          : null;
-
-        if (!contact && args.telefono) {
+        // Crear o actualizar cita real en base de datos
+        if (!contact) {
           contact = await prisma.contact.upsert({
-            where: { phone: args.telefono },
+            where: { phone: validPhone },
             update: {
               name: args.nombre_cliente,
               email: args.email || undefined,
             },
             create: {
               name: args.nombre_cliente,
-              phone: args.telefono,
+              phone: validPhone,
               email: args.email,
             },
           });
-        } else if (contact && args.email && !contact.email) {
+        } else {
+          // Si el contacto tenía un teléfono no válido (como un LID) o faltaba, actualizarlo
           contact = await prisma.contact.update({
             where: { id: contact.id },
-            data: { email: args.email },
+            data: {
+              phone: validPhone,
+              name: args.nombre_cliente || contact.name,
+              email: args.email || contact.email || undefined,
+            },
           });
         }
 
@@ -239,7 +263,7 @@ export async function executeToolCall(
           if (calIntegration?.enabled) {
             const calEvent = await createGoogleCalendarEvent({
               summary: `Cita: ${args.nombre_cliente} - ${args.servicio}`,
-              description: `Cita agendada automáticamente por DentalIA.\nPaciente: ${args.nombre_cliente}\nTeléfono: ${args.telefono || contact?.phone || 'No indicado'}\nTratamiento: ${args.servicio}`,
+              description: `Cita agendada automáticamente por DentalIA.\nPaciente: ${args.nombre_cliente}\nTeléfono: ${validPhone}\nTratamiento: ${args.servicio}`,
               startTime: startTime.toISOString(),
               endTime: endTime.toISOString(),
               attendeeEmail: args.email || contact?.email || undefined,
@@ -260,12 +284,14 @@ export async function executeToolCall(
           console.warn('[Tools] No se pudo sincronizar evento con Google Calendar:', err?.message);
         }
 
-        // 2. Google Sheets: guardar lead y cita en el CRM de contactos
+        // 2. Google Sheets: Actualizar lead a "Cita Agendada" en el CRM
         recordLeadInGoogleSheets({
           name: args.nombre_cliente,
-          phone: args.telefono || contact?.phone,
+          phone: validPhone,
           email: args.email || contact?.email,
           channel: 'IA_ASISTENTE',
+          service: args.servicio,
+          status: 'Cita Agendada',
           notes: `Cita Agendada: ${args.servicio} el ${new Date(startTime).toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`,
         }).catch(() => {});
 
@@ -406,28 +432,39 @@ export async function executeToolCall(
           };
         }
 
+        let cleanPhone = args.telefono;
+        if (cleanPhone) {
+          const v = validateAndNormalizeElSalvadorPhone(cleanPhone);
+          if (v.isValid && v.phone) {
+            cleanPhone = v.phone;
+          }
+        }
+
         if (ctx.contactId) {
           await prisma.contact.update({
             where: { id: ctx.contactId },
             data: {
-              name: args.nombre,
-              email: args.email,
-              notes: args.notas,
+              name: args.nombre || undefined,
+              email: args.email || undefined,
+              phone: cleanPhone || undefined,
+              notes: args.notas || undefined,
             },
           });
         }
 
         recordLeadInGoogleSheets({
           name: args.nombre,
-          phone: args.telefono,
+          phone: cleanPhone,
           email: args.email,
           channel: 'IA_ASISTENTE',
+          service: 'Ficha de contacto',
+          status: 'Lead / Consultando',
           notes: args.notas || 'Ficha actualizada por IA',
         }).catch(() => {});
 
         return {
-          result: { success: true, datosGuardados: args },
-          summary: `Datos de contacto actualizados: ${args.nombre || ''} ${args.telefono || ''}.`,
+          result: { success: true, datosGuardados: { ...args, telefono: cleanPhone } },
+          summary: `Datos de contacto actualizados: ${args.nombre || ''} ${cleanPhone || ''}.`,
         };
       }
 

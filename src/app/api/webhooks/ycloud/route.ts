@@ -4,6 +4,7 @@ import { verifyYCloudWebhookSignature } from '@/lib/channels/whatsapp/ycloud-sig
 import { decrypt } from '@/lib/crypto';
 import { LogStatus, MessageSender, ChannelType, WhatsAppProvider } from '@prisma/client';
 import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
+import { validateAndNormalizeElSalvadorPhone } from '@/lib/phone';
 
 export async function POST(req: Request) {
   try {
@@ -90,30 +91,43 @@ export async function POST(req: Request) {
     // 6. Procesar mensaje entrante si es whatsapp.inbound_message.received
     if (eventType === 'whatsapp.inbound_message.received' && payload.whatsappInboundMessage) {
       const inbound = payload.whatsappInboundMessage;
-      const fromPhone = inbound.from; // Número internacional (ej: "+50371234567")
+      const rawFrom = inbound.from || '';
+      const validation = validateAndNormalizeElSalvadorPhone(rawFrom);
+      const fromPhone = validation.isValid && validation.phone ? validation.phone : ('+' + rawFrom.replace(/\D/g, ''));
       const text = inbound.text?.body || '';
       const bsuid = inbound.customerProfile?.id || inbound.from; // BSUID oficial de YCloud / Meta
       const customerName = inbound.customerProfile?.name || 'Cliente WhatsApp';
 
       // Crear o actualizar contacto unificado
-      const contact = await prisma.contact.upsert({
+      let contact = await prisma.contact.findUnique({
         where: { phone: fromPhone },
-        update: {
-          name: customerName,
-          ycloudBsuid: bsuid,
-        },
-        create: {
-          name: customerName,
-          phone: fromPhone,
-          ycloudBsuid: bsuid,
-        },
       });
 
-      // Sincronizar automáticamente nuevo lead a Google Sheets
+      if (contact) {
+        contact = await prisma.contact.update({
+          where: { id: contact.id },
+          data: {
+            name: contact.name && contact.name !== 'Cliente WhatsApp' ? contact.name : customerName,
+            ycloudBsuid: bsuid,
+          },
+        });
+      } else {
+        contact = await prisma.contact.create({
+          data: {
+            name: customerName,
+            phone: fromPhone,
+            ycloudBsuid: bsuid,
+          },
+        });
+      }
+
+      // Sincronizar automáticamente nuevo lead a Google Sheets con estado "Lead / Consultando"
       recordLeadInGoogleSheets({
         name: customerName,
         phone: fromPhone,
         channel: 'WHATSAPP_YCLOUD',
+        service: 'Consulta general',
+        status: 'Lead / Consultando',
         notes: text ? text.substring(0, 80) : 'Primer contacto YCloud',
       }).catch(() => {});
 

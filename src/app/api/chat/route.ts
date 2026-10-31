@@ -47,6 +47,8 @@ export async function POST(req: Request) {
           phone: contactInfo?.phone || null,
           email: contactInfo?.email || null,
           channel: 'WEB_CHAT',
+          status: 'Lead / Consultando',
+          service: 'Consulta web',
           notes: 'Contacto registrado desde el widget de chat web',
         }).catch(() => {});
       }
