@@ -122,6 +122,49 @@ async function handleInboundMessageJob(payload: {
   const adapter = await getWhatsAppAdapter();
   await adapter.sendTyping(to).catch(() => {});
 
+  // Detección directa de solicitud expresa de atención humana
+  const normalizedText = (payload.text || '').toLowerCase().trim();
+  const isExplicitHumanRequest =
+    normalizedText.includes('atencion humana') ||
+    normalizedText.includes('atención humana') ||
+    normalizedText.includes('hablar con un humano') ||
+    normalizedText.includes('hablar con una persona') ||
+    normalizedText.includes('pasar a humano') ||
+    normalizedText.includes('asesor humano') ||
+    normalizedText.includes('un humano') ||
+    normalizedText.includes('quiero un humano');
+
+  if (isExplicitHumanRequest) {
+    const handoffMsg = 'Entendido perfectamente. He transferido tu conversación a nuestro equipo clínico para que un asesor te atienda personalmente por aquí en unos momentos.';
+    await executeToolCall('pasar_a_humano', {
+      motivo: 'Solicitud expresa del cliente: ' + payload.text,
+      urgencia: 'alta',
+    }, {
+      safeMode: false,
+      conversationId: conversation.id,
+      contactId,
+    });
+
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        sender: MessageSender.ASSISTANT,
+        text: handoffMsg,
+        toolCalls: ['pasar_a_humano'],
+      },
+    });
+
+    await adapter.sendMessage({
+      to: conversation.contact?.waLid || to,
+      text: handoffMsg,
+      recipientBsuid: conversation.contact?.ycloudBsuid || bsuid,
+      waLid: conversation.contact?.waLid || undefined,
+    });
+
+    console.log(`[Worker] Derivación expresa a humano procesada para ${conversation.contact?.waLid || to}`);
+    return;
+  }
+
   // Preparar contexto del asistente
   const [assistant, services, faqs, notes] = await Promise.all([
     prisma.assistantConfig.findFirst(),

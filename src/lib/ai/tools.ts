@@ -11,22 +11,6 @@ export const ASSISTANT_TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'consultar_servicios',
-      description: 'Consulta el catálogo oficial de servicios, duración y tarifas de la clínica.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'Término de búsqueda opcional (ej: "limpieza", "blanqueamiento", "invisalign")',
-          },
-        },
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
       name: 'consultar_disponibilidad',
       description: 'Consulta huecos libres en la agenda para una fecha y franja horaria determinada.',
       parameters: {

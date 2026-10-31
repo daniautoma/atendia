@@ -135,6 +135,13 @@ ${ctx.handoffRules.onComplaint ? '- El cliente expresa una queja, reclamación o
     ctx.handoffRules.onUnknownAnswer ? '- Te formulan una consulta técnica que excede tu información.\n' : ''
   }${ctx.handoffRules.customRule ? `- Regla personalizada: ${ctx.handoffRules.customRule}\n` : ''}
 
+# REGLAS ESTRICTAS DE RESPUESTA Y HERRAMIENTAS
+1. Saludos y consultas generales: Responde cordialmente en texto directo. NUNCA llames a herramientas para saludar ("hola", "buenos días") ni para preguntas sobre precios o tratamientos.
+2. Información de precios y tratamientos: Utiliza directamente el «CATÁLOGO DE SERVICIOS» que figura abajo. Responde con el precio y duración indicados sin llamar a ninguna herramienta.
+3. Consultar disponibilidad: Cuando el paciente indique qué día desea su cita o pregunte por huecos libres, llama a 'consultar_disponibilidad'.
+4. Agendar cita: Llama a 'agendar_cita' ÚNICAMENTE cuando el paciente haya confirmado el servicio, fecha y hora.
+5. Pase a humano: Si el cliente solicita explícitamente atención humana ("quiero atención humana", "humano", "asesor", "persona") o tiene dolor agudo/quejas, llama INMEDIATAMENTE a 'pasar_a_humano'.
+
 # CATÁLOGO DE SERVICIOS
 ${servicesText}
 

@@ -100,6 +100,45 @@ export async function POST(req: Request) {
       });
     }
 
+    // Detección directa de solicitud expresa de atención humana
+    const normalizedText = (message || '').toLowerCase().trim();
+    const isExplicitHumanRequest =
+      normalizedText.includes('atencion humana') ||
+      normalizedText.includes('atención humana') ||
+      normalizedText.includes('hablar con un humano') ||
+      normalizedText.includes('hablar con una persona') ||
+      normalizedText.includes('pasar a humano') ||
+      normalizedText.includes('asesor humano') ||
+      normalizedText.includes('un humano') ||
+      normalizedText.includes('quiero un humano');
+
+    if (isExplicitHumanRequest) {
+      const handoffMsg = 'Entendido. He transferido tu conversación a nuestro equipo de atención humana. Un asesor de la clínica te responderá en unos instantes.';
+      await executeToolCall('pasar_a_humano', {
+        motivo: 'Solicitud expresa del cliente: ' + message,
+        urgencia: 'alta',
+      }, {
+        safeMode: false,
+        conversationId: conversation.id,
+        contactId: contact.id,
+      });
+
+      await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          sender: MessageSender.ASSISTANT,
+          text: handoffMsg,
+          toolCalls: ['pasar_a_humano'],
+        },
+      });
+
+      return NextResponse.json({
+        response: handoffMsg,
+        sessionId: effectiveSessionId,
+        waitingHuman: true,
+      });
+    }
+
     // Si el interruptor general del asistente está en pausa
     if (business && !business.assistantActive) {
       return NextResponse.json({
