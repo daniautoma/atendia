@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       prisma.channelConfig.findUnique({ where: { type: 'WEB' } }),
     ]);
 
-    if (!channelWeb?.webChatEnabled) {
+    if (channelWeb && channelWeb.webChatEnabled === false) {
       return NextResponse.json({ error: 'El chat web está desactivado temporalmente' }, { status: 403 });
     }
 
@@ -140,8 +140,8 @@ export async function POST(req: Request) {
 
     let finalAssistantText = '';
     const completion = await callOpenRouter({
-      model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
-      fallbackModel: assistant?.aiModelFallback || 'anthropic/claude-haiku-5.5',
+      model: assistant?.aiModel || 'openai/gpt-4o-mini',
+      fallbackModel: assistant?.aiModelFallback || 'openai/gpt-4o-mini',
       messages,
       tools: ASSISTANT_TOOLS,
     });
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
       }
 
       const secondPass = await callOpenRouter({
-        model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
+        model: assistant?.aiModel || 'openai/gpt-4o-mini',
         messages,
       });
       finalAssistantText = secondPass.message.content || 'He consultado tus datos con el equipo.';

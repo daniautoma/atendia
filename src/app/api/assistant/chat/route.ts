@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         servicesCount: services.length,
         faqsCount: faqs.length,
         promptLengthChars: systemPrompt.length,
-        model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
+        model: assistant?.aiModel || 'openai/gpt-4o-mini',
       },
       timestamp: nowSV,
     });
@@ -92,8 +92,8 @@ export async function POST(req: Request) {
       { role: 'user', content: message },
     ];
 
-    const model = assistant?.aiModel || 'anthropic/claude-haiku-5.5';
-    const fallbackModel = assistant?.aiModelFallback || 'anthropic/claude-haiku-5.5';
+    const model = assistant?.aiModel || 'openai/gpt-4o-mini';
+    const fallbackModel = assistant?.aiModelFallback || 'openai/gpt-4o-mini';
 
     let currentTurn = 0;
     const maxToolIterations = 5;

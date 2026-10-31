@@ -93,6 +93,8 @@ async function main() {
       businessHours,
       outsideHoursBehavior: 'APPOINTMENT_OR_MESSAGE',
       handoffRules,
+      aiModel: 'openai/gpt-4o-mini',
+      aiModelFallback: 'openai/gpt-4o-mini',
     },
     create: {
       id: 'default-assistant',
@@ -105,8 +107,8 @@ async function main() {
       businessHours,
       outsideHoursBehavior: 'APPOINTMENT_OR_MESSAGE',
       handoffRules,
-      aiModel: 'anthropic/claude-haiku-5.5',
-      aiModelFallback: 'anthropic/claude-haiku-5.5',
+      aiModel: 'openai/gpt-4o-mini',
+      aiModelFallback: 'openai/gpt-4o-mini',
     },
   });
   console.log(`✓ Asistente configurado: ${assistantConfig.name}`);

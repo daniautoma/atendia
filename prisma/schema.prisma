@@ -86,8 +86,8 @@ model AssistantConfig {
   businessHours        Json     // Horario L-D
   outsideHoursBehavior String   @default("APPOINTMENT_OR_MESSAGE") // APPOINTMENT_OR_MESSAGE o ONLY_MESSAGE
   handoffRules         Json     // { onComplaint: true, onUrgency: true, onHumanRequest: true, onUnknownAnswer: true, customRule: "" }
-  aiModel              String   @default("anthropic/claude-haiku-5.5")
-  aiModelFallback      String   @default("anthropic/claude-haiku-5.5")
+  aiModel              String   @default("openai/gpt-4o-mini")
+  aiModelFallback      String   @default("openai/gpt-4o-mini")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

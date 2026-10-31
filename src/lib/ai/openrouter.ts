@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { prisma } from '@/lib/prisma';
 import { LogStatus } from '@prisma/client';
+import { decrypt } from '@/lib/crypto';
 
 export interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -34,26 +35,87 @@ export interface CompletionResult {
 }
 
 const DEPRECATED_MODELS: Record<string, string> = {
+  'anthropic/claude-haiku-5.5': 'openai/gpt-4o-mini',
+  'anthropic/claude-3-5-haiku-20241022': 'anthropic/claude-3.5-haiku',
+  'anthropic/claude-3-5-sonnet-20241022': 'anthropic/claude-3.5-sonnet',
   'google/gemini-flash-1.5-8b': 'google/gemini-2.0-flash-001',
   'google/gemini-flash-1.5': 'google/gemini-2.0-flash-001',
+  'google/gemini-flash-1.5-8b:free': 'google/gemini-2.0-flash-001',
 };
 
+/**
+ * Obtiene la API Key de OpenRouter desde el entorno o desde la base de datos (tabla Integration).
+ */
+export async function getOpenRouterApiKey(): Promise<string | null> {
+  const envKey = process.env.OPENROUTER_API_KEY;
+  if (envKey && envKey.trim().length > 0) {
+    return envKey.trim();
+  }
+
+  try {
+    const integration = await prisma.integration.findUnique({
+      where: { provider: 'openrouter' },
+    });
+
+    if (integration?.credentialsEnc) {
+      try {
+        const decrypted = decrypt(integration.credentialsEnc);
+        if (decrypted) {
+          const parsed = JSON.parse(decrypted);
+          const key = parsed.apiKey || decrypted;
+          if (key && typeof key === 'string' && key.trim().length > 0) {
+            process.env.OPENROUTER_API_KEY = key.trim();
+            return key.trim();
+          }
+        }
+      } catch (decErr) {
+        // En caso de que no esté cifrado y se haya guardado en plano
+        if (integration.credentialsEnc.startsWith('sk-or-')) {
+          process.env.OPENROUTER_API_KEY = integration.credentialsEnc.trim();
+          return integration.credentialsEnc.trim();
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.warn('[OpenRouter] No se pudo leer la API Key de la base de datos:', dbErr);
+  }
+
+  return null;
+}
+
 export async function callOpenRouter(options: ChatCompletionOptions): Promise<CompletionResult> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = await getOpenRouterApiKey();
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   // Remapeo de seguridad para modelos obsoletos o descatalogados en OpenRouter
-  const primaryModel = DEPRECATED_MODELS[options.model] || options.model || 'anthropic/claude-haiku-5.5';
+  const primaryModel = DEPRECATED_MODELS[options.model] || options.model || 'openai/gpt-4o-mini';
   let defaultFallback = DEPRECATED_MODELS[options.fallbackModel || ''] || options.fallbackModel || 'openai/gpt-4o-mini';
 
   if (defaultFallback === primaryModel) {
-    defaultFallback = primaryModel.startsWith('anthropic') ? 'openai/gpt-4o-mini' : 'anthropic/claude-haiku-5.5';
+    defaultFallback = primaryModel === 'openai/gpt-4o-mini' ? 'google/gemini-2.0-flash-001' : 'openai/gpt-4o-mini';
   }
 
-  // Si no hay API key configurada en .env, devolvemos simulación inteligente
+  // Si no hay API key configurada ni en .env ni en la base de datos, devolver respuesta honesta de contingencia
   if (!apiKey || apiKey.trim() === '') {
-    console.warn('[OpenRouter] ⚠️ OPENROUTER_API_KEY no detectada en process.env. Ejecutando simulador local de DentalIA.');
-    return simulateOpenRouterResponse(options);
+    console.warn('[OpenRouter] ⚠️ OPENROUTER_API_KEY no detectada ni en entorno ni en DB.');
+    await prisma.activityLog.create({
+      data: {
+        action: 'ai.missing_api_key',
+        status: LogStatus.WARNING,
+        details: {
+          message: 'Falta configurar OPENROUTER_API_KEY en el panel de Ajustes o en el archivo .env',
+        },
+      },
+    }).catch(() => {});
+
+    return {
+      modelUsed: 'sistema/sin_api_key',
+      wasFallback: true,
+      message: {
+        role: 'assistant',
+        content: '¡Hola! Gracias por comunicarte con Clínica Dental San Salvador. En este momento nuestro sistema de atención automática está en configuración técnica. Un miembro de nuestro equipo te atenderá personalmente por este medio a la brevedad. Para urgencias directas puedes llamarnos al +503 2200 1234.',
+      },
+    };
   }
 
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
@@ -61,10 +123,10 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
     'Authorization': `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
     'HTTP-Referer': appUrl,
-    'X-Title': 'Coversa',
+    'X-Title': 'Atendia Dental',
   };
 
-  // 1. Intento con modelo elegido
+  // 1. Intento con modelo principal
   try {
     const payload: any = {
       model: primaryModel,
@@ -127,8 +189,8 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
     }).catch(() => {});
   }
 
-  // 2. Reintento con modelo de respaldo (anthropic/claude-haiku-5.5)
-  console.log(`[OpenRouter] Reintentando con modelo por defecto: ${defaultFallback}`);
+  // 2. Reintento con modelo de respaldo (defaultFallback)
+  console.log(`[OpenRouter] Reintentando con modelo de respaldo: ${defaultFallback}`);
   try {
     const fallbackPayload: any = {
       model: defaultFallback,
@@ -158,235 +220,21 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
           rawUsage: fbData.usage,
         };
       }
+    } else {
+      const fbErrBody = await fallbackResponse.text();
+      console.error(`[OpenRouter] Fallback ${defaultFallback} falló (HTTP ${fallbackResponse.status}):`, fbErrBody);
     }
   } catch (fbErr: any) {
-    console.error(`[OpenRouter] Fallback también falló:`, fbErr?.message);
+    console.error(`[OpenRouter] Fallback también falló con excepción:`, fbErr?.message);
   }
 
-  // Si ambos fallaron o hubo problema de cuota, recurrir a la simulación segura
-  return simulateOpenRouterResponse(options);
-}
-
-/**
- * Motor de simulación inteligente para pruebas locales inmediatas cuando no hay API key o hay timeout
- */
-function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionResult {
-  const lastMsg = options.messages[options.messages.length - 1];
-
-  // Si el último mensaje es el resultado de una herramienta, sintetizamos la respuesta final:
-  if (lastMsg && lastMsg.role === 'tool') {
-    const toolName = lastMsg.name;
-    let toolResult: any = {};
-    try {
-      toolResult = JSON.parse(lastMsg.content || '{}');
-    } catch {
-      toolResult = {};
-    }
-
-    if (toolName === 'consultar_servicios') {
-      return {
-        modelUsed: options.model,
-        wasFallback: false,
-        message: {
-          role: 'assistant',
-          content: 'Nuestra **Limpieza Dental e Higiene Profunda** tiene una tarifa oficial de **$35** (duración: 45 min) e incluye ultrasonidos, pulido y flúor. ¿Deseas que te reserve cita para este tratamiento?',
-        },
-      };
-    }
-
-    if (toolName === 'pasar_a_humano') {
-      return {
-        modelUsed: options.model,
-        wasFallback: false,
-        message: {
-          role: 'assistant',
-          content: 'Entiendo perfectamente tu dolor y lo molesto que es. He activado el protocolo de urgencia y transferido la conversación a nuestro equipo clínico para atenderte de inmediato. ¿Nos puedes facilitar un teléfono directo o prefieres venir directamente a Paseo General Escalón #3700, San Salvador?',
-        },
-      };
-    }
-
-    if (toolName === 'consultar_disponibilidad') {
-      return {
-        modelUsed: options.model,
-        wasFallback: false,
-        message: {
-          role: 'assistant',
-          content: 'Para el martes tenemos disponibles los siguientes huecos: **10:00**, **11:30**, **16:00** y **17:30**. ¿Te viene bien el hueco de las 11:30 para confirmártelo?',
-        },
-      };
-    }
-
-    if (toolName === 'agendar_cita') {
-      return {
-        modelUsed: options.model,
-        wasFallback: false,
-        message: {
-          role: 'assistant',
-          content: '¡Perfecto! Tu cita ha quedado reservada y anotada en nuestro calendario. Te enviaremos un recordatorio el día anterior por WhatsApp. ¡Te esperamos en Clínica Dental San Salvador!',
-        },
-      };
-    }
-
-    if (toolName === 'probar_conexion_ycloud') {
-      return {
-        modelUsed: options.model,
-        wasFallback: false,
-        message: {
-          role: 'assistant',
-          content: '✅ **Diagnóstico YCloud completado**: Arquitectura modular lista. Endpoint `/api/webhooks/ycloud` verificado con firma criptográfica HMAC-SHA256 (`YCloud-Signature`), tolerancia de 300 segundos y compatibilidad con plantillas oficiales de Meta.',
-        },
-      };
-    }
-
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: 'He consultado la información con el sistema. ¿Hay algo más en lo que te pueda ayudar?',
-      },
-    };
-  }
-
-  // De lo contrario, decidimos si invocar una herramienta:
-  const lastUserMsg = [...options.messages].reverse().find((m) => m.role === 'user')?.content?.toLowerCase() || '';
-
-  // 1. Detección de prueba YCloud
-  if (lastUserMsg.includes('ycloud') || lastUserMsg.includes('webhook')) {
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [
-          {
-            id: 'call_' + Math.random().toString(36).substring(2, 9),
-            type: 'function',
-            function: {
-              name: 'probar_conexion_ycloud',
-              arguments: JSON.stringify({ checkWebhook: true }),
-            },
-          },
-        ],
-      },
-    };
-  }
-
-  // 2. Detección de urgencia o dolor
-  if (lastUserMsg.includes('urgente') || lastUserMsg.includes('dolor') || lastUserMsg.includes('fuerte') || lastUserMsg.includes('muela')) {
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [
-          {
-            id: 'call_' + Math.random().toString(36).substring(2, 9),
-            type: 'function',
-            function: {
-              name: 'pasar_a_humano',
-              arguments: JSON.stringify({
-                motivo: 'Urgencia dental por dolor agudo de muela manifestado por el paciente.',
-                urgencia: 'alta',
-              }),
-            },
-          },
-        ],
-      },
-    };
-  }
-
-  // 3. Detección de consulta de servicios / precios
-  if (
-    lastUserMsg.includes('precio') ||
-    lastUserMsg.includes('cuanto') ||
-    lastUserMsg.includes('cuesta') ||
-    lastUserMsg.includes('limpieza') ||
-    lastUserMsg.includes('blanqueamiento') ||
-    lastUserMsg.includes('servicio') ||
-    lastUserMsg.includes('ofrecen') ||
-    lastUserMsg.includes('tratamiento')
-  ) {
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [
-          {
-            id: 'call_' + Math.random().toString(36).substring(2, 9),
-            type: 'function',
-            function: {
-              name: 'consultar_servicios',
-              arguments: JSON.stringify({ query: 'limpieza' }),
-            },
-          },
-        ],
-      },
-    };
-  }
-
-  // 4. Detección de confirmación de cita ("sí", "confirmo", "de acuerdo", "perfecto")
-  const hasAgreed = lastUserMsg.includes('sí') || lastUserMsg.includes('si') || lastUserMsg.includes('confirmo') || lastUserMsg.includes('de acuerdo') || lastUserMsg.includes('vale');
-  if (hasAgreed) {
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [
-          {
-            id: 'call_' + Math.random().toString(36).substring(2, 9),
-            type: 'function',
-            function: {
-              name: 'agendar_cita',
-              arguments: JSON.stringify({
-                nombre_cliente: 'Paciente Demo',
-                telefono: '+50371234567',
-                servicio: 'Primera Visita y Diagnóstico 3D',
-                fecha_hora: '2026-11-03T11:30:00',
-                confirmado_por_cliente: true,
-              }),
-            },
-          },
-        ],
-      },
-    };
-  }
-
-  // 5. Detección de petición de cita
-  if (lastUserMsg.includes('cita') || lastUserMsg.includes('agendar') || lastUserMsg.includes('martes') || lastUserMsg.includes('hora')) {
-    return {
-      modelUsed: options.model,
-      wasFallback: false,
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [
-          {
-            id: 'call_' + Math.random().toString(36).substring(2, 9),
-            type: 'function',
-            function: {
-              name: 'consultar_disponibilidad',
-              arguments: JSON.stringify({ fecha: '2026-11-03', hora_preferida: '11:30' }),
-            },
-          },
-        ],
-      },
-    };
-  }
-
-  // 6. Respuesta general
+  // Si ambos fallaron o hubo problema de cuota/conexión en OpenRouter
   return {
-    modelUsed: options.model,
-    wasFallback: false,
+    modelUsed: 'sistema/fallback_error',
+    wasFallback: true,
     message: {
       role: 'assistant',
-      content: '¡Hola! Soy DentalIA, el asistente de Clínica Dental San Salvador. ¿En qué te podemos ayudar hoy? Puedes consultarme sobre nuestros servicios odontológicos, precios en USD o agendar tu cita.',
+      content: '¡Hola! Gracias por comunicarte con Clínica Dental San Salvador. En este momento estoy experimentando una breve intermitencia técnica y he transferido tu consulta a nuestro equipo. Un asesor te responderá a la brevedad. Para urgencias directas puedes llamarnos al +503 2200 1234.',
     },
   };
 }

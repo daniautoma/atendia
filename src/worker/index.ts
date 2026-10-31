@@ -162,8 +162,8 @@ async function handleInboundMessageJob(payload: {
 
   let finalAssistantText = '';
   const completion = await callOpenRouter({
-    model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
-    fallbackModel: assistant?.aiModelFallback || 'anthropic/claude-haiku-5.5',
+    model: assistant?.aiModel || 'openai/gpt-4o-mini',
+    fallbackModel: assistant?.aiModelFallback || 'openai/gpt-4o-mini',
     messages,
     tools: ASSISTANT_TOOLS,
   });
@@ -193,12 +193,23 @@ async function handleInboundMessageJob(payload: {
     }
 
     const secondPass = await callOpenRouter({
-      model: assistant?.aiModel || 'anthropic/claude-haiku-5.5',
+      model: assistant?.aiModel || 'openai/gpt-4o-mini',
       messages,
     });
     finalAssistantText = secondPass.message.content || 'He consultado tu solicitud.';
   } else {
     finalAssistantText = completion.message.content || '¿En qué te puedo ayudar hoy?';
+  }
+
+  // Si se activó respuesta de contingencia por falta de clave o fallo de proveedor, derivar a humano
+  if (completion.modelUsed.startsWith('sistema/')) {
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: {
+        status: 'WAITING_HUMAN',
+        needsHumanReason: 'Derivado automáticamente a equipo humano (Intermitencia técnica de IA)',
+      },
+    }).catch(() => {});
   }
 
   // Guardar mensaje generado por el asistente

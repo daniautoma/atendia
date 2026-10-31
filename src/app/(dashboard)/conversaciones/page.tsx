@@ -33,6 +33,11 @@ export default function ConversacionesPage() {
 
   const prevMessagesCountRef = useRef(0);
   const prevWaitingCountRef = useRef(0);
+  const selectedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   const playChime = () => {
     try {
@@ -65,8 +70,9 @@ export default function ConversacionesPage() {
         }
         prevWaitingCountRef.current = currentWaiting;
 
-        if (!selectedId && data.conversations.length > 0) {
+        if (!selectedIdRef.current && data.conversations.length > 0) {
           setSelectedId(data.conversations[0].id);
+          selectedIdRef.current = data.conversations[0].id;
         }
       }
     } catch {} finally {
@@ -216,7 +222,10 @@ export default function ConversacionesPage() {
                 return (
                   <div
                     key={c.id}
-                    onClick={() => setSelectedId(c.id)}
+                    onClick={() => {
+                      selectedIdRef.current = c.id;
+                      setSelectedId(c.id);
+                    }}
                     className={`p-3.5 transition-colors cursor-pointer flex flex-col gap-1.5 ${
                       isSelected
                         ? 'bg-teal-50/70 border-l-4 border-l-teal-600'

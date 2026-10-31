@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getOpenRouterApiKey } from '@/lib/ai/openrouter';
 import * as cheerio from 'cheerio';
 import { z } from 'zod';
 
@@ -55,8 +56,8 @@ export async function POST(req: Request) {
 
     // 3. Obtener configuración del modelo de IA
     const config = await prisma.assistantConfig.findFirst();
-    const model = config?.aiModel || 'anthropic/claude-haiku-5.5';
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const model = config?.aiModel || 'openai/gpt-4o-mini';
+    const apiKey = await getOpenRouterApiKey();
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
     if (apiKey && apiKey.trim().length > 0) {

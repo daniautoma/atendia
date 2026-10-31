@@ -12,6 +12,21 @@ export default async function DemoPage() {
       prisma.businessProfile.findFirst(),
       prisma.channelConfig.findUnique({ where: { type: 'WEB' } }),
     ]);
+
+    // Garantizar que exista configuración por defecto si la BD no se ha sembrado
+    if (!channelWeb) {
+      try {
+        channelWeb = await prisma.channelConfig.create({
+          data: {
+            type: 'WEB',
+            webChatEnabled: true,
+            webChatColor: '#0d9488',
+            webChatTitle: 'Atención Clínica Dental San Salvador',
+            webChatWelcome: '¡Hola! ¿Tienes alguna pregunta sobre nuestros tratamientos o deseas pedir cita?',
+          },
+        });
+      } catch {}
+    }
   } catch {}
 
   return (
@@ -20,7 +35,7 @@ export default async function DemoPage() {
       <nav className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
-            L
+            S
           </div>
           <div>
             <h1 className="font-bold text-stone-900 text-sm">{business?.name || 'Clínica Dental San Salvador'}</h1>
@@ -74,11 +89,11 @@ export default async function DemoPage() {
       </main>
 
       {/* Widget Interactivo Real del Chat Web */}
-      {channelWeb?.webChatEnabled && (
+      {(channelWeb ? channelWeb.webChatEnabled : true) && (
         <WebChatWidget
-          color={channelWeb.webChatColor || '#0d9488'}
-          title={channelWeb.webChatTitle || 'Atención Clínica Dental San Salvador'}
-          welcomeMessage={channelWeb.webChatWelcome || '¡Hola! ¿En qué te podemos ayudar?'}
+          color={channelWeb?.webChatColor || '#0d9488'}
+          title={channelWeb?.webChatTitle || 'Atención Clínica Dental San Salvador'}
+          welcomeMessage={channelWeb?.webChatWelcome || '¡Hola! ¿Tienes alguna pregunta sobre nuestros tratamientos o deseas pedir cita?'}
         />
       )}
     </div>

@@ -23,16 +23,16 @@ services:
       dockerfile: Dockerfile
     container_name: atendia-web
     restart: always
-    command: sh -c "npx prisma db push && npm run start"
+    command: sh -c "npx prisma db push && npm run prisma:seed && npm run start"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/${POSTGRES_DB:-atendia}
-      APP_URL: ${APP_URL}
+      APP_URL: ${APP_URL:-http://localhost:3000}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       AUTH_SECRET: ${AUTH_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@atendia.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin1234password}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       TZ: America/El_Salvador

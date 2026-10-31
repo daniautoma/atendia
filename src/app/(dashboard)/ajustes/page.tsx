@@ -29,11 +29,15 @@ export default function AjustesPage() {
   const [timezone, setTimezone] = useState('America/El_Salvador');
   const [agencyName, setAgencyName] = useState('Agencia Atendia');
   const [agencyLogo, setAgencyLogo] = useState('');
-  const [selectedModel, setSelectedModel] = useState('anthropic/claude-haiku-5.5');
-  const [fallbackModel, setFallbackModel] = useState('anthropic/claude-haiku-5.5');
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini');
+  const [fallbackModel, setFallbackModel] = useState('openai/gpt-4o-mini');
   const [models, setModels] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [hasOpenRouterKey, setHasOpenRouterKey] = useState(false);
+  const [maskedOpenRouterKey, setMaskedOpenRouterKey] = useState('');
+  const [openrouterApiKey, setOpenrouterApiKey] = useState('');
+  const [testingOpenRouter, setTestingOpenRouter] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Estimador de costes
   const [conversationsPerMonth, setConversationsPerMonth] = useState(600);
@@ -56,38 +60,89 @@ export default function AjustesPage() {
           setAgencyLogo(data.business.agencyLogo || '');
         }
         if (data.assistant) {
-          setSelectedModel(data.assistant.aiModel || 'anthropic/claude-haiku-5.5');
-          setFallbackModel(data.assistant.aiModelFallback || 'anthropic/claude-haiku-5.5');
+          setSelectedModel(data.assistant.aiModel || 'openai/gpt-4o-mini');
+          setFallbackModel(data.assistant.aiModelFallback || 'openai/gpt-4o-mini');
         }
         if (Array.isArray(data.models)) setModels(data.models);
         if (Array.isArray(data.users)) setUsers(data.users);
         setHasOpenRouterKey(!!data.hasOpenRouterKey);
+        if (data.maskedOpenRouterKey) setMaskedOpenRouterKey(data.maskedOpenRouterKey);
       })
       .catch(() => setError('Error al cargar la configuración.'))
       .finally(() => setLoading(false));
   }, []);
 
+  const handleTestOpenRouter = async () => {
+    setTestingOpenRouter(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'TEST_OPENROUTER',
+          apiKey: openrouterApiKey,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTestResult({
+          success: true,
+          message: data.message || 'Conexión verificada exitosamente con OpenRouter.',
+        });
+        setHasOpenRouterKey(true);
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error || 'No se pudo conectar con OpenRouter.',
+        });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err?.message || 'Error de red al conectar con OpenRouter.',
+      });
+    } finally {
+      setTestingOpenRouter(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
+      const payload: any = {
+        business: {
+          agencyName,
+          agencyLogo,
+          timezone,
+        },
+        assistant: {
+          aiModel: selectedModel,
+          aiModelFallback: fallbackModel,
+        },
+      };
+
+      if (openrouterApiKey.trim().length > 0) {
+        payload.openrouterApiKey = openrouterApiKey.trim();
+      }
+
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business: {
-            agencyName,
-            agencyLogo,
-            timezone,
-          },
-          assistant: {
-            aiModel: selectedModel,
-            aiModelFallback: fallbackModel,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Error al guardar ajustes');
       setSaveSuccess(true);
+      if (openrouterApiKey.trim().length > 0) {
+        setHasOpenRouterKey(true);
+        setMaskedOpenRouterKey(
+          openrouterApiKey.length > 12
+            ? `${openrouterApiKey.slice(0, 7)}••••••••${openrouterApiKey.slice(-4)}`
+            : '••••••••••••'
+        );
+        setOpenrouterApiKey('');
+      }
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch {
       setError('No se pudieron guardar los ajustes.');
@@ -247,6 +302,78 @@ export default function AjustesPage() {
                 Si el modelo principal falla o no responde, se registrará en Actividad y se reintentará una vez con este modelo.
               </p>
             </div>
+          </div>
+
+          {/* Configuración de API Key de OpenRouter */}
+          <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-teal-600" />
+                <label className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+                  Clave de API de OpenRouter (OPENROUTER_API_KEY)
+                </label>
+              </div>
+              {maskedOpenRouterKey && (
+                <span className="text-[11px] font-mono text-stone-500 bg-stone-200/60 px-2 py-0.5 rounded">
+                  Actual: {maskedOpenRouterKey}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="password"
+                value={openrouterApiKey}
+                onChange={(e) => setOpenrouterApiKey(e.target.value)}
+                placeholder={hasOpenRouterKey ? 'Introduce una nueva clave para reemplazar la actual (sk-or-v1-...)' : 'Pega aquí tu clave sk-or-v1-...'}
+                className="flex-1 px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 bg-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleTestOpenRouter}
+                disabled={testingOpenRouter || (!openrouterApiKey && !hasOpenRouterKey)}
+                className="px-4 py-2 rounded-lg bg-stone-800 hover:bg-stone-900 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
+              >
+                {testingOpenRouter ? (
+                  <span>Probando...</span>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-teal-300" />
+                    <span>Probar Conexión</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {testResult && (
+              <div
+                className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                  testResult.success
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                {testResult.success ? (
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{testResult.message}</span>
+              </div>
+            )}
+
+            <p className="text-[11px] text-stone-500">
+              Puedes obtener o recargar tu clave en{' '}
+              <a
+                href="https://openrouter.ai/keys"
+                target="_blank"
+                rel="noreferrer"
+                className="text-teal-600 underline font-medium hover:text-teal-700"
+              >
+                openrouter.ai/keys
+              </a>
+              . Al hacer clic en &quot;Guardar ajustes&quot;, tu clave se guardará de forma cifrada en la base de datos y se activará inmediatamente sin reiniciar el servidor.
+            </p>
           </div>
 
           {/* Estimación interactiva de costes */}
