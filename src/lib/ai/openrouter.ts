@@ -33,10 +33,22 @@ export interface CompletionResult {
   rawUsage?: any;
 }
 
+const DEPRECATED_MODELS: Record<string, string> = {
+  'google/gemini-flash-1.5-8b': 'google/gemini-2.0-flash-001',
+  'google/gemini-flash-1.5': 'google/gemini-2.0-flash-001',
+};
+
 export async function callOpenRouter(options: ChatCompletionOptions): Promise<CompletionResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
-  const defaultFallback = options.fallbackModel || 'anthropic/claude-haiku-5.5';
+
+  // Remapeo de seguridad para modelos obsoletos o descatalogados en OpenRouter
+  const primaryModel = DEPRECATED_MODELS[options.model] || options.model || 'anthropic/claude-haiku-5.5';
+  let defaultFallback = DEPRECATED_MODELS[options.fallbackModel || ''] || options.fallbackModel || 'openai/gpt-4o-mini';
+
+  if (defaultFallback === primaryModel) {
+    defaultFallback = primaryModel.startsWith('anthropic') ? 'openai/gpt-4o-mini' : 'anthropic/claude-haiku-5.5';
+  }
 
   // Si no hay API key configurada en .env, devolvemos simulación inteligente
   if (!apiKey || apiKey.trim() === '') {
@@ -55,7 +67,7 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
   // 1. Intento con modelo elegido
   try {
     const payload: any = {
-      model: options.model,
+      model: primaryModel,
       messages: options.messages,
       temperature: options.temperature ?? 0.3,
     };
@@ -77,7 +89,7 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
       if (choice?.message) {
         return {
           message: choice.message,
-          modelUsed: options.model,
+          modelUsed: primaryModel,
           wasFallback: false,
           rawUsage: data.usage,
         };
@@ -85,7 +97,7 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
     }
 
     const errorBody = await response.text();
-    console.warn(`[OpenRouter] Fallo en modelo ${options.model} (HTTP ${response.status}):`, errorBody);
+    console.warn(`[OpenRouter] Fallo en modelo ${primaryModel} (HTTP ${response.status}):`, errorBody);
 
     // Registrar advertencia en Actividad
     await prisma.activityLog.create({
@@ -93,7 +105,7 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
         action: 'ai.model_fallback',
         status: LogStatus.WARNING,
         details: {
-          originalModel: options.model,
+          originalModel: primaryModel,
           fallbackModel: defaultFallback,
           httpStatus: response.status,
           error: errorBody.slice(0, 300),
@@ -101,13 +113,13 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
       },
     }).catch(() => {});
   } catch (err: any) {
-    console.warn(`[OpenRouter] Excepción en modelo ${options.model}:`, err?.message);
+    console.warn(`[OpenRouter] Excepción en modelo ${primaryModel}:`, err?.message);
     await prisma.activityLog.create({
       data: {
         action: 'ai.model_error',
         status: LogStatus.WARNING,
         details: {
-          originalModel: options.model,
+          originalModel: primaryModel,
           fallbackModel: defaultFallback,
           error: err?.message,
         },

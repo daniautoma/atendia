@@ -56,14 +56,14 @@ export const POPULAR_TOOL_MODELS = [
     description: 'Código abierto potente con llamada a herramientas estructuradas.',
   },
   {
-    id: 'google/gemini-flash-1.5-8b',
-    name: 'Gemini Flash 1.5 8B',
+    id: 'google/gemini-2.0-flash-001',
+    name: 'Gemini 2.0 Flash',
     provider: 'Google',
-    inputCostPer1M: 0.0375,
-    outputCostPer1M: 0.15,
-    contextLength: 1000000,
+    inputCostPer1M: 0.1,
+    outputCostPer1M: 0.4,
+    contextLength: 1048576,
     recommended: false,
-    description: 'Costo ultrabajo y ventana de contexto gigante.',
+    description: 'Nueva generación ultrarrápida de Google con soporte nativo de herramientas y 1M de contexto.',
   },
 ];
 
