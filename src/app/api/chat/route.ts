@@ -4,7 +4,6 @@ import { buildSystemPrompt } from '@/lib/prompt-builder';
 import { callOpenRouter, OpenRouterMessage } from '@/lib/ai/openrouter';
 import { ASSISTANT_TOOLS, executeToolCall } from '@/lib/ai/tools';
 import { MessageSender, ChannelType } from '@prisma/client';
-import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 
 export async function POST(req: Request) {
   try {
@@ -40,18 +39,6 @@ export async function POST(req: Request) {
           email: contactInfo?.email || null,
         },
       });
-
-      if (contactInfo?.phone || contactInfo?.email || contactInfo?.name) {
-        recordLeadInGoogleSheets({
-          name: contactInfo?.name || 'Visitante Web',
-          phone: contactInfo?.phone || null,
-          email: contactInfo?.email || null,
-          channel: 'WEB_CHAT',
-          status: 'Lead / Consultando',
-          service: 'Consulta web',
-          notes: 'Contacto registrado desde el widget de chat web',
-        }).catch(() => {});
-      }
     }
 
     // 2. Recuperar o crear conversación

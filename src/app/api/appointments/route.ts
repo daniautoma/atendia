@@ -6,7 +6,10 @@ import {
   updateGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
 } from '@/lib/integrations/google/calendar';
-import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
+import {
+  recordAppointmentInSheets,
+  updateAppointmentStatusInSheets,
+} from '@/lib/integrations/google/sheets';
 import { sendGmailEmail } from '@/lib/integrations/google/gmail';
 
 export async function GET() {
@@ -143,16 +146,17 @@ export async function POST(req: Request) {
       console.warn('[Appointments API] Error al sincronizar con Google Calendar:', gcalErr?.message);
     }
 
-    // 5. Integración Google Sheets: guardar lead y actualizar a Cita Agendada en el CRM
-    recordLeadInGoogleSheets({
+    // 5. Integración Google Sheets CRM: registrar en Hoja 2 "Citas Agendadas" y Hoja 1 "Leads"
+    recordAppointmentInSheets({
       name: patientName,
-      phone: phone || null,
-      email: email || null,
-      channel: 'PANEL_MANUAL',
+      phone: phone || 'No indicado',
       service: serviceName,
-      status: 'Cita Agendada',
-      notes: `Cita: ${serviceName} el ${start.toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`,
-    }).catch(() => {});
+      dateTime: start,
+      status: 'Activa',
+      channel: 'Panel',
+    }).catch((err) => {
+      console.warn('[Appointments API] Error al registrar cita en Google Sheets:', err?.message);
+    });
 
     // 6. Integración Gmail: Disparar correo de confirmación al paciente si hay email
     if (email && email.trim()) {
@@ -292,6 +296,28 @@ export async function PUT(req: Request) {
       include: { contact: true },
     });
 
+    // 3. Reflejar en Hoja 2 "Citas Agendadas" de Google Sheets
+    if (status === 'CANCELLED') {
+      updateAppointmentStatusInSheets({
+        phone: appt.contact?.phone,
+        patientName: appt.contact?.name,
+        serviceName: appt.serviceName,
+        status: 'Cancelada',
+      }).catch((err) => {
+        console.warn('[Appointments API] Error al actualizar estado a Cancelada en Google Sheets:', err?.message);
+      });
+    } else if (startTime) {
+      updateAppointmentStatusInSheets({
+        phone: appt.contact?.phone,
+        patientName: appt.contact?.name,
+        newDateTime: startTime,
+        serviceName: serviceName || appt.serviceName,
+        status: 'Reprogramada',
+      }).catch((err) => {
+        console.warn('[Appointments API] Error al reprogramar cita en Google Sheets:', err?.message);
+      });
+    }
+
     return NextResponse.json({ success: true, appointment: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error al actualizar cita' }, { status: 500 });
@@ -318,11 +344,22 @@ export async function DELETE(req: Request) {
 
     const appt = await prisma.appointment.findUnique({
       where: { id },
+      include: { contact: true },
     });
 
     if (!appt) {
       return NextResponse.json({ error: 'Cita no encontrada' }, { status: 404 });
     }
+
+    // Reflejar cancelación en Google Sheets CRM
+    updateAppointmentStatusInSheets({
+      phone: appt.contact?.phone,
+      patientName: appt.contact?.name,
+      serviceName: appt.serviceName,
+      status: 'Cancelada',
+    }).catch((err) => {
+      console.warn('[Appointments API] Error al cancelar cita en Google Sheets en eliminación:', err?.message);
+    });
 
     // Si tiene evento en Google Calendar, eliminarlo también en la nube
     if (appt.googleCalendarEventId) {

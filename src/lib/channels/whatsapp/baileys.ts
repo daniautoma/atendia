@@ -12,7 +12,6 @@ import {
   ConversationStatus,
   MessageSender,
 } from '@prisma/client';
-import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 import { extractWhatsAppPhoneAndLid } from '@/lib/phone';
 import path from 'path';
 import fs from 'fs';
@@ -252,16 +251,6 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
                 },
               });
             }
-
-            // Sincronizar nuevo lead en Google Sheets con estado "Lead / Consultando"
-            recordLeadInGoogleSheets({
-              name: contact.name || pushName,
-              phone: phone || contact.phone,
-              channel: 'WHATSAPP_BAILEYS',
-              service: 'Consulta general',
-              status: 'Lead / Consultando',
-              notes: text ? text.substring(0, 80) : 'Primer contacto Baileys',
-            }).catch(() => {});
 
             // 2. Crear o recuperar conversación
             let conv = await prisma.conversation.findFirst({

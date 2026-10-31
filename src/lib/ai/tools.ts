@@ -1,7 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { LogStatus } from '@prisma/client';
 import { sendSlackNotification } from '@/lib/integrations/slack';
-import { recordLeadInGoogleSheets, appendContactToGoogleSheet } from '@/lib/integrations/google/sheets';
+import {
+  saveOrUpdateLeadInSheets,
+  recordAppointmentInSheets,
+} from '@/lib/integrations/google/sheets';
 import { createGoogleCalendarEvent } from '@/lib/integrations/google/calendar';
 import { sendGmailEmail } from '@/lib/integrations/google/gmail';
 import { createStripePaymentLink } from '@/lib/integrations/stripe';
@@ -46,6 +49,28 @@ export const ASSISTANT_TOOLS = [
           confirmado_por_cliente: { type: 'boolean', description: 'Debe ser true tras confirmación expresa del cliente' },
         },
         required: ['nombre_cliente', 'telefono', 'servicio', 'fecha_hora', 'confirmado_por_cliente'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'registrar_lead',
+      description: 'Registra o actualiza en la pestaña "Leads" del CRM de Google Sheets los datos de un paciente potencial cuando este solicita información de tarifas, tratamientos o resuelve dudas pero decide no agendar en este momento.',
+      parameters: {
+        type: 'object',
+        properties: {
+          nombre: { type: 'string', description: 'Nombre del paciente o contacto' },
+          telefono: { type: 'string', description: 'Teléfono de contacto de El Salvador (+503... o número de 8 dígitos ej: 70123444). Opcional si el cliente aún no lo ha brindado.' },
+          servicio_interes: { type: 'string', description: 'Tratamiento por el que preguntó o mostró interés (ej: "Limpieza Dental", "Blanqueamiento LED", "Ortodoncia Invisible" o "No especificado")' },
+          estado_lead: {
+            type: 'string',
+            enum: ['Potencial', 'Solo Información'],
+            description: '"Solo Información" si solo pidió precios/horarios, "Potencial" si demostró alto interés en atenderse pronto.',
+          },
+          resumen_conversacion: { type: 'string', description: 'Resumen conciso en una sola línea de lo conversado y el motivo de seguimiento' },
+        },
+        required: ['nombre', 'resumen_conversacion'],
       },
     },
   },
@@ -170,6 +195,59 @@ export async function executeToolCall(
         };
       }
 
+      case 'registrar_lead': {
+        const contact = ctx.contactId
+          ? await prisma.contact.findUnique({ where: { id: ctx.contactId } })
+          : null;
+
+        let candidatePhone = args.telefono || contact?.phone || null;
+        if (candidatePhone) {
+          const v = validateAndNormalizeElSalvadorPhone(candidatePhone);
+          if (v.isValid && v.phone) {
+            candidatePhone = v.phone;
+          }
+        }
+
+        const patientName = args.nombre || contact?.name || 'Prospecto';
+        const serviceInterest = args.servicio_interes || 'No especificado';
+        const leadStatus = args.estado_lead || 'Solo Información';
+        const summary = args.resumen_conversacion || 'Paciente consultó información pero no agendó en este momento';
+
+        if (contact) {
+          await prisma.contact.update({
+            where: { id: contact.id },
+            data: {
+              name: patientName !== 'Prospecto' ? patientName : contact.name,
+              phone: candidatePhone || contact.phone,
+              notes: summary,
+            },
+          }).catch(() => {});
+        }
+
+        await saveOrUpdateLeadInSheets({
+          name: patientName,
+          phone: candidatePhone,
+          channel: 'WhatsApp',
+          serviceInterest,
+          leadStatus,
+          summary,
+        });
+
+        return {
+          result: {
+            success: true,
+            lead: {
+              nombre: patientName,
+              telefono: candidatePhone,
+              servicio: serviceInterest,
+              estado: leadStatus,
+              resumen: summary,
+            },
+          },
+          summary: `Lead registrado en CRM ("Leads"): ${patientName} - ${serviceInterest} [${leadStatus}].`,
+        };
+      }
+
       case 'agendar_cita': {
         if (!args.confirmado_por_cliente) {
           return {
@@ -284,16 +362,17 @@ export async function executeToolCall(
           console.warn('[Tools] No se pudo sincronizar evento con Google Calendar:', err?.message);
         }
 
-        // 2. Google Sheets: Actualizar lead a "Cita Agendada" en el CRM
-        recordLeadInGoogleSheets({
+        // 2. Google Sheets: Registrar en Hoja 2 "Citas Agendadas" y sincronizar estado en Hoja 1 "Leads"
+        recordAppointmentInSheets({
           name: args.nombre_cliente,
           phone: validPhone,
-          email: args.email || contact?.email,
-          channel: 'IA_ASISTENTE',
           service: args.servicio,
-          status: 'Cita Agendada',
-          notes: `Cita Agendada: ${args.servicio} el ${new Date(startTime).toLocaleString('es-SV', { timeZone: 'America/El_Salvador' })}`,
-        }).catch(() => {});
+          dateTime: startTime,
+          status: 'Activa',
+          channel: 'WhatsApp',
+        }).catch((err) => {
+          console.warn('[Tools] Error al registrar cita en Google Sheets:', err?.message);
+        });
 
         // 3. Gmail: disparar correo HTML con datos y recomendaciones si está habilitado y hay email
         const patientEmail = args.email || contact?.email;
@@ -452,14 +531,13 @@ export async function executeToolCall(
           });
         }
 
-        recordLeadInGoogleSheets({
+        saveOrUpdateLeadInSheets({
           name: args.nombre,
           phone: cleanPhone,
-          email: args.email,
-          channel: 'IA_ASISTENTE',
-          service: 'Ficha de contacto',
-          status: 'Lead / Consultando',
-          notes: args.notas || 'Ficha actualizada por IA',
+          channel: 'WhatsApp',
+          serviceInterest: 'No especificado',
+          leadStatus: 'Potencial',
+          summary: args.notas || 'Ficha actualizada por IA',
         }).catch(() => {});
 
         return {

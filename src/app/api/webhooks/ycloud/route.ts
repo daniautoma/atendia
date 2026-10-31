@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { verifyYCloudWebhookSignature } from '@/lib/channels/whatsapp/ycloud-signature';
 import { decrypt } from '@/lib/crypto';
 import { LogStatus, MessageSender, ChannelType, WhatsAppProvider } from '@prisma/client';
-import { recordLeadInGoogleSheets } from '@/lib/integrations/google/sheets';
 import { validateAndNormalizeElSalvadorPhone } from '@/lib/phone';
 
 export async function POST(req: Request) {
@@ -120,16 +119,6 @@ export async function POST(req: Request) {
           },
         });
       }
-
-      // Sincronizar automáticamente nuevo lead a Google Sheets con estado "Lead / Consultando"
-      recordLeadInGoogleSheets({
-        name: customerName,
-        phone: fromPhone,
-        channel: 'WHATSAPP_YCLOUD',
-        service: 'Consulta general',
-        status: 'Lead / Consultando',
-        notes: text ? text.substring(0, 80) : 'Primer contacto YCloud',
-      }).catch(() => {});
 
       // Crear o recuperar conversación activa
       let conversation = await prisma.conversation.findFirst({
