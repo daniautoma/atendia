@@ -20,7 +20,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV TZ=Europe/Madrid
+ENV TZ=America/El_Salvador
 
 RUN apk add --no-cache tzdata libc6-compat openssl
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

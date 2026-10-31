@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_password}
       POSTGRES_DB: ${POSTGRES_DB:-atendia}
-      TZ: Europe/Madrid
+      TZ: America/El_Salvador
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -35,7 +35,7 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      TZ: Europe/Madrid
+      TZ: America/El_Salvador
     depends_on:
       - postgres
     expose:
@@ -61,7 +61,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       WHATSAPP_SESSION_DIR: /app/whatsapp-session
-      TZ: Europe/Madrid
+      TZ: America/El_Salvador
     depends_on:
       - postgres
       - web

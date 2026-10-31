@@ -4,7 +4,7 @@
 
 Responde con la información de la empresa, gestiona citas en tiempo real en **Google Calendar**, envía confirmaciones por **Gmail**, anota clientes en **Google Sheets**, cobra señales con **Stripe**, avisa al equipo por **Slack** o webhooks, y cede el control a una persona cuando es necesario.
 
-Toda la interfaz está en **español de España (`es-ES`)** con zona horaria **`Europe/Madrid`**. Todo se configura desde el propio panel, sin tocar código.
+Toda la interfaz está en **español (`es-SV`)** con zona horaria **`America/El_Salvador` (GMT-6)** y moneda en **Dólares (USD)**. Todo se configura desde el propio panel, sin tocar código.
 
 ---
 
@@ -45,7 +45,7 @@ Una vez arrancado, entra en [http://localhost:3000](http://localhost:3000) e ini
 - **Correo**: `admin@atendia.local`
 - **Contraseña**: `admin1234password`
 
-*(El negocio inicial viene precargado con los datos reales de la **«Clínica Dental Lumen»**: 8 servicios odontológicos, 10 preguntas frecuentes y horarios de Madrid).*
+*(El negocio inicial viene precargado con los datos de la **«Clínica Dental San Salvador»**: 8 servicios odontológicos en USD, 10 preguntas frecuentes y horarios de San Salvador).*
 
 ---
 
