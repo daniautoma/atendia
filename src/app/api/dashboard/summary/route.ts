@@ -20,6 +20,7 @@ export async function GET() {
       appointmentsCount,
       waitingHumanCount,
       recentLogs,
+      upcomingAppointments,
     ] = await Promise.all([
       prisma.businessProfile.findFirst(),
       prisma.channelConfig.findMany(),
@@ -31,6 +32,11 @@ export async function GET() {
       prisma.activityLog.findMany({
         take: 6,
         orderBy: { createdAt: 'desc' },
+      }),
+      prisma.appointment.findMany({
+        take: 6,
+        orderBy: { startTime: 'desc' },
+        include: { contact: true },
       }),
     ]);
 
@@ -57,6 +63,15 @@ export async function GET() {
         waitingHumanCount,
         avgResponseTimeSec: 2.8,
       },
+      appointments: upcomingAppointments.map((a) => ({
+        id: a.id,
+        serviceName: a.serviceName,
+        startTime: a.startTime,
+        endTime: a.endTime,
+        status: a.status,
+        contactName: a.contact.name,
+        contactPhone: a.contact.phone,
+      })),
       recentLogs: recentLogs.map((l) => ({
         id: l.id,
         action: l.action,

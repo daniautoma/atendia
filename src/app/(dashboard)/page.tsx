@@ -223,7 +223,89 @@ export default function ResumenPage() {
           </div>
         </div>
 
-        {/* 3. Últimas Acciones del Asistente */}
+        {/* 3. Próximas Citas Confirmadas */}
+        <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+            <div className="flex items-center gap-2">
+              <CalendarCheck2 className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-sm font-bold text-stone-900">Citas Agendadas por el Asistente</h3>
+            </div>
+            <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold">
+              {data?.appointments?.length || 0} cita(s) registrada(s)
+            </span>
+          </div>
+
+          {(!data?.appointments || data.appointments.length === 0) ? (
+            <div className="text-center py-8 text-stone-400 text-xs">
+              No hay citas agendadas todavía. Cuando un paciente reserve por WhatsApp o Web, aparecerá aquí.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-stone-100 text-stone-400 font-medium">
+                    <th className="pb-2">Paciente</th>
+                    <th className="pb-2">Tratamiento</th>
+                    <th className="pb-2">Fecha y Hora</th>
+                    <th className="pb-2">Teléfono</th>
+                    <th className="pb-2">Estado</th>
+                    <th className="pb-2 text-right">Google Calendar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {data.appointments.map((a: any) => (
+                    <tr key={a.id} className="hover:bg-stone-50/60 transition-colors">
+                      <td className="py-3 font-bold text-stone-900">{a.contactName || 'Paciente'}</td>
+                      <td className="py-3 text-stone-700">{a.serviceName}</td>
+                      <td className="py-3 text-stone-600 font-mono">
+                        {new Date(a.startTime).toLocaleDateString('es-ES', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Europe/Madrid',
+                        })}
+                      </td>
+                      <td className="py-3 text-stone-500 font-mono">{a.contactPhone || '—'}</td>
+                      <td className="py-3">
+                        <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                          Confirmada
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/appointments', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ appointmentId: a.id, action: 'SYNC_CALENDAR' }),
+                              });
+                              const json = await res.json();
+                              if (json.success) {
+                                alert('✓ Cita sincronizada con éxito en tu Google Calendar');
+                              } else {
+                                alert('Error al sincronizar: ' + (json.error || 'Verifica que Google Calendar esté conectado'));
+                              }
+                            } catch (e: any) {
+                              alert('Error de red: ' + e.message);
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-semibold cursor-pointer border border-teal-200"
+                        >
+                          Sincronizar a Calendar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Últimas Acciones del Asistente */}
         <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-stone-100">
             <h3 className="text-sm font-bold text-stone-900">Últimas Acciones del Asistente</h3>

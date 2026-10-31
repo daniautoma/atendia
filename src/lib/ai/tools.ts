@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { LogStatus } from '@prisma/client';
 import { sendSlackNotification } from '@/lib/integrations/slack';
 import { appendContactToGoogleSheet } from '@/lib/integrations/google/sheets';
+import { createGoogleCalendarEvent } from '@/lib/integrations/google/calendar';
 import { createStripePaymentLink } from '@/lib/integrations/stripe';
 import { dispatchOutgoingWebhook } from '@/lib/integrations/webhooks';
 
@@ -231,6 +232,17 @@ export async function executeToolCall(
         }
 
         // Disparar integraciones activas
+        createGoogleCalendarEvent({
+          summary: `Cita: ${args.nombre_cliente} - ${args.servicio}`,
+          description: `Cita agendada automáticamente por LumenIA.\nPaciente: ${args.nombre_cliente}\nTeléfono: ${args.telefono || contact?.phone || 'No indicado'}\nTratamiento: ${args.servicio}`,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          attendeeEmail: contact?.email || undefined,
+          timeZone: 'Europe/Madrid',
+        }).catch((err) => {
+          console.warn('[Tools] No se pudo sincronizar evento con Google Calendar:', err.message);
+        });
+
         sendSlackNotification('Nueva Cita Agendada', {
           'Paciente': args.nombre_cliente,
           'Tratamiento': args.servicio,
