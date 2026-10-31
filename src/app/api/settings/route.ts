@@ -93,7 +93,7 @@ export async function GET() {
   try {
     await requireAuth();
 
-    const [business, assistant, users, openRouterKey] = await Promise.all([
+    const [business, assistant, users, openRouterKey, dbIntegration] = await Promise.all([
       prisma.businessProfile.findFirst(),
       prisma.assistantConfig.findFirst(),
       prisma.user.findMany({
@@ -101,6 +101,7 @@ export async function GET() {
         orderBy: { createdAt: 'asc' },
       }),
       getOpenRouterApiKey(),
+      prisma.integration.findUnique({ where: { provider: 'openrouter' } }),
     ]);
 
     const maskedKey = openRouterKey
@@ -108,6 +109,8 @@ export async function GET() {
         ? `${openRouterKey.slice(0, 7)}••••••••${openRouterKey.slice(-4)}`
         : '••••••••••••'
       : '';
+
+    const keySource = dbIntegration?.credentialsEnc ? 'DATABASE' : process.env.OPENROUTER_API_KEY ? 'ENV' : 'NONE';
 
     return NextResponse.json({
       business,
@@ -119,6 +122,7 @@ export async function GET() {
       users,
       hasOpenRouterKey: !!openRouterKey,
       maskedOpenRouterKey: maskedKey,
+      keySource,
     });
   } catch {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

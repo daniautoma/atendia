@@ -38,6 +38,7 @@ export default function AjustesPage() {
   const [openrouterApiKey, setOpenrouterApiKey] = useState('');
   const [testingOpenRouter, setTestingOpenRouter] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [keySource, setKeySource] = useState<'DATABASE' | 'ENV' | 'NONE'>('NONE');
   const [fetchingFreeModels, setFetchingFreeModels] = useState(false);
   const [freeModelsLoaded, setFreeModelsLoaded] = useState(false);
   const [customModelInput, setCustomModelInput] = useState('');
@@ -70,30 +71,54 @@ export default function AjustesPage() {
         if (Array.isArray(data.users)) setUsers(data.users);
         setHasOpenRouterKey(!!data.hasOpenRouterKey);
         if (data.maskedOpenRouterKey) setMaskedOpenRouterKey(data.maskedOpenRouterKey);
+        if (data.keySource) setKeySource(data.keySource);
       })
       .catch(() => setError('Error al cargar la configuración.'))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleTestOpenRouter = async () => {
+  const handleTestAndSaveOpenRouter = async () => {
     setTestingOpenRouter(true);
     setTestResult(null);
+    const keyToTest = openrouterApiKey.trim();
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'TEST_OPENROUTER',
-          apiKey: openrouterApiKey,
+          apiKey: keyToTest || undefined,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setTestResult({
-          success: true,
-          message: data.message || 'Conexión verificada exitosamente con OpenRouter.',
-        });
-        setHasOpenRouterKey(true);
+        // Si el usuario introdujo una clave nueva y es válida, guardarla directamente en la BD
+        if (keyToTest) {
+          await fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              openrouterApiKey: keyToTest,
+            }),
+          });
+          setMaskedOpenRouterKey(
+            keyToTest.length > 12
+              ? `${keyToTest.slice(0, 7)}••••••••${keyToTest.slice(-4)}`
+              : '••••••••••••'
+          );
+          setOpenrouterApiKey('');
+          setKeySource('DATABASE');
+          setHasOpenRouterKey(true);
+          setTestResult({
+            success: true,
+            message: '✓ Clave verificada con OpenRouter y GUARDADA en la base de datos de Atendia.',
+          });
+        } else {
+          setTestResult({
+            success: true,
+            message: '✓ Conexión con OpenRouter verificada exitosamente.',
+          });
+        }
       } else {
         setTestResult({
           success: false,
@@ -411,18 +436,30 @@ export default function AjustesPage() {
 
           {/* Configuración de API Key de OpenRouter */}
           <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-teal-600" />
                 <label className="text-xs font-bold text-stone-900 uppercase tracking-wider">
                   Clave de API de OpenRouter (OPENROUTER_API_KEY)
                 </label>
               </div>
-              {maskedOpenRouterKey && (
-                <span className="text-[11px] font-mono text-stone-500 bg-stone-200/60 px-2 py-0.5 rounded">
-                  Actual: {maskedOpenRouterKey}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {keySource === 'DATABASE' && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    ✓ Activa en: Atendia (Prioridad 1)
+                  </span>
+                )}
+                {keySource === 'ENV' && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    ⚠ Activa desde: .env
+                  </span>
+                )}
+                {maskedOpenRouterKey && (
+                  <span className="text-[11px] font-mono text-stone-600 bg-stone-200/80 px-2 py-0.5 rounded">
+                    {maskedOpenRouterKey}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -430,21 +467,21 @@ export default function AjustesPage() {
                 type="password"
                 value={openrouterApiKey}
                 onChange={(e) => setOpenrouterApiKey(e.target.value)}
-                placeholder={hasOpenRouterKey ? 'Introduce una nueva clave para reemplazar la actual (sk-or-v1-...)' : 'Pega aquí tu clave sk-or-v1-...'}
+                placeholder={hasOpenRouterKey ? 'Pega tu nueva clave para actualizarla en Atendia (sk-or-v1-...)' : 'Pega aquí tu clave sk-or-v1-...'}
                 className="flex-1 px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 bg-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
               />
               <button
                 type="button"
-                onClick={handleTestOpenRouter}
-                disabled={testingOpenRouter || (!openrouterApiKey && !hasOpenRouterKey)}
-                className="px-4 py-2 rounded-lg bg-stone-800 hover:bg-stone-900 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
+                onClick={handleTestAndSaveOpenRouter}
+                disabled={testingOpenRouter || (!openrouterApiKey.trim() && !hasOpenRouterKey)}
+                className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
               >
                 {testingOpenRouter ? (
-                  <span>Probando...</span>
+                  <span>Verificando y guardando...</span>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-                    <span>Probar Conexión</span>
+                    <Sparkles className="w-3.5 h-3.5 text-teal-200" />
+                    <span>{openrouterApiKey.trim() ? 'Probar y Guardar en Atendia' : 'Probar Clave Actual'}</span>
                   </>
                 )}
               </button>
@@ -467,17 +504,8 @@ export default function AjustesPage() {
               </div>
             )}
 
-            <p className="text-[11px] text-stone-500">
-              Puedes obtener o recargar tu clave en{' '}
-              <a
-                href="https://openrouter.ai/keys"
-                target="_blank"
-                rel="noreferrer"
-                className="text-teal-600 underline font-medium hover:text-teal-700"
-              >
-                openrouter.ai/keys
-              </a>
-              . Al hacer clic en &quot;Guardar ajustes&quot;, tu clave se guardará de forma cifrada en la base de datos y se activará inmediatamente sin reiniciar el servidor.
+            <p className="text-[11px] text-stone-500 leading-relaxed">
+              <strong>Decisión de prioridad:</strong> La clave guardada en este formulario de Atendia tiene <strong>prioridad absoluta</strong> sobre cualquier variable de entorno o archivo <code className="text-stone-700 font-mono">.env</code>. Al pulsar en &quot;Probar y Guardar en Atendia&quot;, se valida en vivo contra OpenRouter y se almacena cifrada en la base de datos de PostgreSQL con efecto inmediato para todo el sistema.
             </p>
           </div>
 

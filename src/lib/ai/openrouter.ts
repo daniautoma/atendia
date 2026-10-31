@@ -45,12 +45,14 @@ const DEPRECATED_MODELS: Record<string, string> = {
 
 /**
  * Obtiene la API Key de OpenRouter.
- * Prioriza la clave guardada y actualizada en la base de datos (tabla Integration)
- * para que cualquier actualización desde la interfaz web (/ajustes) tenga efecto inmediato
- * y prevalezca sobre claves antiguas o caducadas en el archivo .env.
+ * DECISIÓN DE ARQUITECTURA:
+ * 1. PRIORIDAD ABSOLUTA: Base de datos (tabla Integration). La clave guardada en la interfaz de Atendia
+ *    es la fuente de verdad definitiva y anula cualquier variable en archivos .env o contenedores.
+ * 2. RESPALDO: Variable de entorno process.env.OPENROUTER_API_KEY únicamente si en la base de datos
+ *    no se ha configurado ninguna clave todavía.
  */
 export async function getOpenRouterApiKey(): Promise<string | null> {
-  // 1. Prioridad: Clave en base de datos (tabla Integration)
+  // 1. Prioridad Máxima: Clave guardada en Atendia (Base de datos)
   try {
     const integration = await prisma.integration.findUnique({
       where: { provider: 'openrouter' },
@@ -60,17 +62,18 @@ export async function getOpenRouterApiKey(): Promise<string | null> {
       try {
         const decrypted = decrypt(integration.credentialsEnc);
         if (decrypted) {
-          const parsed = JSON.parse(decrypted);
-          const key = parsed.apiKey || decrypted;
+          let key = decrypted;
+          try {
+            const parsed = JSON.parse(decrypted);
+            key = parsed.apiKey || decrypted;
+          } catch {}
           if (key && typeof key === 'string' && key.trim().length > 0) {
-            process.env.OPENROUTER_API_KEY = key.trim();
             return key.trim();
           }
         }
       } catch (decErr) {
-        // En caso de que se haya guardado en plano
+        // Si se guardó en texto plano por contingencia
         if (integration.credentialsEnc.startsWith('sk-or-')) {
-          process.env.OPENROUTER_API_KEY = integration.credentialsEnc.trim();
           return integration.credentialsEnc.trim();
         }
       }
@@ -79,7 +82,7 @@ export async function getOpenRouterApiKey(): Promise<string | null> {
     console.warn('[OpenRouter] No se pudo leer la API Key de la base de datos:', dbErr);
   }
 
-  // 2. Respaldo: Variable de entorno (.env o Dokploy)
+  // 2. Respaldo: Archivo .env / entorno del contenedor (solo si la BD está vacía)
   const envKey = process.env.OPENROUTER_API_KEY;
   if (envKey && envKey.trim().length > 0) {
     return envKey.trim();
