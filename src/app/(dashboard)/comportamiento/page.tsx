@@ -15,6 +15,8 @@ import {
   ShieldAlert,
   UserCheck,
   Calendar,
+  Edit3,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function ComportamientoPage() {
@@ -49,10 +51,15 @@ export default function ComportamientoPage() {
     customRule: '',
   });
 
-  // Modal para ver prompt completo
+  // Modal para ver y editar prompt completo
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const [fullPrompt, setFullPrompt] = useState('');
+  const [isCustomPrompt, setIsCustomPrompt] = useState(false);
+  const [customPromptText, setCustomPromptText] = useState('');
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [loadingPrompt, setLoadingPrompt] = useState(false);
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [promptSaveSuccess, setPromptSaveSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -69,6 +76,10 @@ export default function ComportamientoPage() {
           if (data.businessHours) setBusinessHours(data.businessHours);
           if (data.outsideHoursBehavior) setOutsideHoursBehavior(data.outsideHoursBehavior);
           if (data.handoffRules) setHandoffRules(data.handoffRules);
+          if (data.systemPromptOverride) {
+            setIsCustomPrompt(true);
+            setCustomPromptText(data.systemPromptOverride);
+          }
         }
       })
       .catch((err) => setError('Error al cargar la configuración.'))
@@ -107,10 +118,13 @@ export default function ComportamientoPage() {
   const handleOpenPromptModal = async () => {
     setIsPromptModalOpen(true);
     setLoadingPrompt(true);
+    setIsEditingPrompt(false);
     try {
       const res = await fetch('/api/assistant/prompt');
       const data = await res.json();
       setFullPrompt(data.prompt || 'No se pudo generar el prompt.');
+      setIsCustomPrompt(!!data.isCustom);
+      setCustomPromptText(data.systemPromptOverride || data.prompt || '');
     } catch {
       setFullPrompt('Error al obtener el prompt completo.');
     } finally {
@@ -118,8 +132,60 @@ export default function ComportamientoPage() {
     }
   };
 
+  const handleSaveCustomPrompt = async () => {
+    setSavingPrompt(true);
+    try {
+      const res = await fetch('/api/assistant/behavior', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemPromptOverride: customPromptText,
+        }),
+      });
+      if (!res.ok) throw new Error('Error al guardar prompt');
+      setIsCustomPrompt(true);
+      setFullPrompt(customPromptText);
+      setPromptSaveSuccess(true);
+      setTimeout(() => setPromptSaveSuccess(false), 2500);
+    } catch (err: any) {
+      alert(err?.message || 'Error al guardar prompt personalizado');
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
+  const handleResetDefaultPrompt = async () => {
+    if (!confirm('¿Deseas restablecer el prompt a la plantilla automática basada en servicios, horarios y FAQs?')) {
+      return;
+    }
+    setSavingPrompt(true);
+    try {
+      const res = await fetch('/api/assistant/behavior', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemPromptOverride: null,
+        }),
+      });
+      if (!res.ok) throw new Error('Error al restablecer prompt');
+      setIsCustomPrompt(false);
+      // Recargar prompt dinámico
+      const pRes = await fetch('/api/assistant/prompt');
+      const pData = await pRes.json();
+      setFullPrompt(pData.prompt);
+      setCustomPromptText(pData.prompt);
+      setIsEditingPrompt(false);
+      setPromptSaveSuccess(true);
+      setTimeout(() => setPromptSaveSuccess(false), 2500);
+    } catch (err: any) {
+      alert(err?.message || 'Error al restablecer prompt');
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
   const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(fullPrompt);
+    navigator.clipboard.writeText(isEditingPrompt ? customPromptText : fullPrompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -154,7 +220,10 @@ export default function ComportamientoPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5 text-stone-500" />
-              <span>Ver el prompt completo</span>
+              <span>Ver y editar prompt</span>
+              {isCustomPrompt && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Prompt personalizado activo" />
+              )}
             </button>
             <button
               onClick={handleSave}
@@ -515,38 +584,109 @@ export default function ComportamientoPage() {
         </section>
       </div>
 
-      {/* Modal «Ver el prompt completo» */}
+      {/* Modal «Ver y editar el prompt» */}
       <Modal
         isOpen={isPromptModalOpen}
         onClose={() => setIsPromptModalOpen(false)}
-        title="Prompt de Sistema Completo"
+        title="Prompt de Sistema del Asistente"
         description="Esta es la instrucción exacta, en tiempo real, que recibe el modelo de OpenRouter en cada llamada."
         maxWidth="3xl"
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-            <span className="text-xs text-stone-500">Modo solo lectura</span>
-            <button
-              onClick={handleCopyPrompt}
-              className="flex items-center gap-1.5 px-3 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium transition-colors cursor-pointer"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Copiado</span>
-                </>
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-200">
+            <div className="flex items-center gap-2">
+              {isCustomPrompt ? (
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                  ★ Prompt Personalizado Activo
+                </span>
               ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-stone-500" />
-                  <span>Copiar al portapapeles</span>
-                </>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                  Plantilla Automática Dinámica
+                </span>
               )}
-            </button>
+
+              <button
+                type="button"
+                onClick={() => setIsEditingPrompt(!isEditingPrompt)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium cursor-pointer transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-stone-600" />
+                <span>{isEditingPrompt ? 'Ver vista previa' : 'Editar prompt'}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isCustomPrompt && (
+                <button
+                  type="button"
+                  onClick={handleResetDefaultPrompt}
+                  disabled={savingPrompt}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium border border-rose-200 cursor-pointer transition-colors disabled:opacity-50"
+                  title="Eliminar personalización y volver a la plantilla automática"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Restablecer</span>
+                </button>
+              )}
+
+              {isEditingPrompt && (
+                <button
+                  type="button"
+                  onClick={handleSaveCustomPrompt}
+                  disabled={savingPrompt}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  {savingPrompt ? (
+                    <span>Guardando...</span>
+                  ) : promptSaveSuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>¡Guardado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Guardar prompt</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleCopyPrompt}
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium transition-colors cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Copiar</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {loadingPrompt ? (
             <div className="py-12 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
+            </div>
+          ) : isEditingPrompt ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-stone-500">
+                Puedes editar directamente las instrucciones del sistema. Incluye <code className="bg-stone-200 text-stone-800 px-1 py-0.5 rounded font-mono text-[10px]">&#123;fecha&#125;</code> para inyectar automáticamente la fecha y hora de San Salvador.
+              </p>
+              <textarea
+                value={customPromptText}
+                onChange={(e) => setCustomPromptText(e.target.value)}
+                className="w-full h-[55vh] p-4 bg-stone-900 text-stone-100 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500 overflow-y-auto whitespace-pre-wrap"
+                placeholder="Escribe aquí las instrucciones de sistema completas..."
+              />
             </div>
           ) : (
             <pre className="p-4 bg-stone-900 text-stone-100 rounded-xl text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-[60vh]">

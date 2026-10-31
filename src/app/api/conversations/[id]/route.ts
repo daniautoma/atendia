@@ -26,6 +26,15 @@ export async function GET(
       return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 });
     }
 
+    // Reiniciar contador de mensajes no leídos al abrir el chat
+    if (conversation.unreadCount > 0) {
+      await prisma.conversation.update({
+        where: { id },
+        data: { unreadCount: 0 },
+      });
+      conversation.unreadCount = 0;
+    }
+
     return NextResponse.json({ conversation });
   } catch {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

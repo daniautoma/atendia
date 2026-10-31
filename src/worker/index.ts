@@ -148,6 +148,7 @@ async function handleInboundMessageJob(payload: {
     services,
     faqs,
     knowledgeNotes: notes,
+    systemPromptOverride: assistant?.systemPromptOverride,
   });
 
   const historyMessages = (conversation.messages || []).map((m) => ({

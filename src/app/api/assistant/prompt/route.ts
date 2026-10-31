@@ -37,10 +37,13 @@ export async function GET() {
       services,
       faqs,
       knowledgeNotes: notes,
+      systemPromptOverride: assistant.systemPromptOverride,
     });
 
     return NextResponse.json({
       prompt: compiledPrompt,
+      isCustom: !!assistant.systemPromptOverride,
+      systemPromptOverride: assistant.systemPromptOverride || '',
       meta: {
         assistantName: assistant.name,
         businessName: business.name,

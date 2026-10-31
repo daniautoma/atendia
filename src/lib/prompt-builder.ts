@@ -31,6 +31,7 @@ export interface PromptContext {
   knowledgeNotes: Array<{ title: string; content: string }>;
   contactName?: string | null;
   contactPhone?: string | null;
+  systemPromptOverride?: string | null;
 }
 
 export function buildSystemPrompt(ctx: PromptContext): string {
@@ -46,6 +47,17 @@ export function buildSystemPrompt(ctx: PromptContext): string {
     minute: '2-digit',
   });
   const formattedDateTime = dateFormatter.format(now);
+
+  // Si existe un prompt personalizado definido por el usuario, se utiliza con la fecha/hora actual inyectada
+  if (ctx.systemPromptOverride && ctx.systemPromptOverride.trim().length > 0) {
+    let custom = ctx.systemPromptOverride;
+    if (custom.includes('{fecha}') || custom.includes('{date}')) {
+      custom = custom.replace(/\{fecha\}|\{date\}/gi, formattedDateTime);
+    } else {
+      custom = `${custom}\n\n# FECHA Y HORA ACTUAL (ZONA HORARIA ${ctx.timezone || 'America/El_Salvador'})\nHoy es: ${formattedDateTime}.`;
+    }
+    return custom;
+  }
 
   const toneGuidelines: Record<string, string> = {
     cercano: 'Tono cercano, empático, cálido y amable. Trata al cliente con cordialidad, usando un tuteo respetuoso y mostrando genuino interés por ayudarle.',
@@ -88,7 +100,7 @@ Ten en cuenta siempre la fecha y hora actual para responder con coherencia sobre
 # ESTILO Y TONO DE COMUNICACIÓN
 ${selectedTone}
 - Respuestas breves, naturales y adaptadas al formato de mensajería instantánea (máximo 2 a 3 párrafos cortos).
-- Emplea un castellano neutro de España (ej: "cita", "coche", "aparcar", "ordenador", "tarjeta").
+- Emplea un español neutro y cálido adaptado a El Salvador y Centroamérica (ej: "cita", "vehículo / carro", "estacionamiento / parqueo", "computadora", "tarjeta").
 - No repitas saludos si la conversación ya está en curso.
 
 # REGLAS FIJAS DE SEGURIDAD (INVIOLABLES)

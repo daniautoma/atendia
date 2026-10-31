@@ -62,6 +62,7 @@ export async function PUT(req: Request) {
         businessHours: body.businessHours ?? config.businessHours,
         outsideHoursBehavior: body.outsideHoursBehavior ?? config.outsideHoursBehavior,
         handoffRules: body.handoffRules ?? config.handoffRules,
+        systemPromptOverride: body.systemPromptOverride !== undefined ? body.systemPromptOverride : config.systemPromptOverride,
       },
     });
 

@@ -38,6 +38,9 @@ export default function AjustesPage() {
   const [openrouterApiKey, setOpenrouterApiKey] = useState('');
   const [testingOpenRouter, setTestingOpenRouter] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [fetchingFreeModels, setFetchingFreeModels] = useState(false);
+  const [freeModelsLoaded, setFreeModelsLoaded] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState('');
 
   // Estimador de costes
   const [conversationsPerMonth, setConversationsPerMonth] = useState(600);
@@ -104,6 +107,30 @@ export default function AjustesPage() {
       });
     } finally {
       setTestingOpenRouter(false);
+    }
+  };
+
+  const handleFetchFreeModels = async () => {
+    setFetchingFreeModels(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'FETCH_OPENROUTER_MODELS' }),
+      });
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.models)) {
+        const existingIds = new Set(models.map((m) => m.id));
+        const newModels = data.models.filter((m: any) => !existingIds.has(m.id));
+        setModels((prev) => [...prev, ...newModels]);
+        setFreeModelsLoaded(true);
+      } else {
+        alert(data.error || 'No se pudieron consultar modelos gratuitos.');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Error de red al consultar modelos.');
+    } finally {
+      setFetchingFreeModels(false);
     }
   };
 
@@ -270,6 +297,11 @@ export default function AjustesPage() {
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 text-sm text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
+                {!models.some((m) => m.id === selectedModel) && (
+                  <option value={selectedModel}>
+                    {selectedModel} (Personalizado)
+                  </option>
+                )}
                 {models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.provider}) {m.recommended ? '★ Recomendado' : ''}
@@ -292,6 +324,11 @@ export default function AjustesPage() {
                 onChange={(e) => setFallbackModel(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-stone-300 text-sm text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
+                {!models.some((m) => m.id === fallbackModel) && (
+                  <option value={fallbackModel}>
+                    {fallbackModel} (Personalizado)
+                  </option>
+                )}
                 {models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.provider})
@@ -301,6 +338,74 @@ export default function AjustesPage() {
               <p className="text-[11px] text-stone-400 mt-1.5">
                 Si el modelo principal falla o no responde, se registrará en Actividad y se reintentará una vez con este modelo.
               </p>
+            </div>
+          </div>
+
+          {/* Selector de modelos gratuitos y personalizados */}
+          <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                Modelos Gratuitos y Personalizados de OpenRouter
+              </span>
+              <button
+                type="button"
+                onClick={handleFetchFreeModels}
+                disabled={fetchingFreeModels}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                <span>
+                  {fetchingFreeModels
+                    ? 'Consultando OpenRouter...'
+                    : freeModelsLoaded
+                    ? '✓ Modelos gratuitos agregados a la lista'
+                    : 'Buscar modelos gratuitos (:free) en OpenRouter'}
+                </span>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-stone-600 mb-1">
+                O escribir ID exacto de cualquier modelo de OpenRouter (ej: google/gemma-4-26b-a4b-it:free)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customModelInput}
+                  onChange={(e) => setCustomModelInput(e.target.value)}
+                  placeholder="ej: google/gemma-4-26b-a4b-it:free"
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-mono text-stone-900 bg-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clean = customModelInput.trim();
+                    if (clean) {
+                      setSelectedModel(clean);
+                      if (!models.some((m) => m.id === clean)) {
+                        setModels((prev) => [
+                          ...prev,
+                          {
+                            id: clean,
+                            name: `${clean} (Personalizado)`,
+                            provider: clean.split('/')[0] || 'OpenRouter',
+                            inputCostPer1M: 0,
+                            outputCostPer1M: 0,
+                            contextLength: 32768,
+                            recommended: false,
+                            description: 'Modelo definido manualmente.',
+                          },
+                        ]);
+                      }
+                      setCustomModelInput('');
+                    }
+                  }}
+                  disabled={!customModelInput.trim()}
+                  className="px-3.5 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white text-xs font-semibold shadow-xs disabled:opacity-40 cursor-pointer shrink-0"
+                >
+                  Asignar como Principal
+                </button>
+              </div>
             </div>
           </div>
 

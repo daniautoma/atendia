@@ -88,6 +88,7 @@ model AssistantConfig {
   handoffRules         Json     // { onComplaint: true, onUrgency: true, onHumanRequest: true, onUnknownAnswer: true, customRule: "" }
   aiModel              String   @default("openai/gpt-4o-mini")
   aiModelFallback      String   @default("openai/gpt-4o-mini")
+  systemPromptOverride String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

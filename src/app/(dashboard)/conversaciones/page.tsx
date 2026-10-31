@@ -63,7 +63,11 @@ export default function ConversacionesPage() {
       const res = await fetch(`/api/conversations?filter=${filter}`);
       const data = await res.json();
       if (data.conversations) {
-        setConversations(data.conversations);
+        // Asegurar que el chat actualmente abierto no muestre globo de no leídos
+        const updatedList = data.conversations.map((c: any) =>
+          c.id === selectedIdRef.current ? { ...c, unreadCount: 0 } : c
+        );
+        setConversations(updatedList);
         const currentWaiting = data.conversations.filter((c: any) => c.status === 'WAITING_HUMAN').length;
         if (currentWaiting > prevWaitingCountRef.current && prevWaitingCountRef.current !== 0) {
           playChime();
@@ -225,6 +229,9 @@ export default function ConversacionesPage() {
                     onClick={() => {
                       selectedIdRef.current = c.id;
                       setSelectedId(c.id);
+                      setConversations((prev) =>
+                        prev.map((conv) => (conv.id === c.id ? { ...conv, unreadCount: 0 } : conv))
+                      );
                     }}
                     className={`p-3.5 transition-colors cursor-pointer flex flex-col gap-1.5 ${
                       isSelected
@@ -247,13 +254,20 @@ export default function ConversacionesPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-stone-400">
-                        {new Date(c.lastMessageAt).toLocaleTimeString('es-SV', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'America/El_Salvador',
-                        })}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-stone-400">
+                          {new Date(c.lastMessageAt).toLocaleTimeString('es-SV', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'America/El_Salvador',
+                          })}
+                        </span>
+                        {c.unreadCount > 0 && (
+                          <span className="bg-emerald-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 shadow-2xs">
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <p className="text-xs text-stone-500 truncate">{c.lastMessage}</p>

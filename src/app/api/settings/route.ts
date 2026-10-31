@@ -67,6 +67,26 @@ export const POPULAR_TOOL_MODELS = [
     recommended: false,
     description: 'Código abierto potente con llamada a herramientas estructuradas.',
   },
+  {
+    id: 'google/gemini-2.0-flash-exp:free',
+    name: 'Gemini 2.0 Flash Exp (Gratuito)',
+    provider: 'Google',
+    inputCostPer1M: 0,
+    outputCostPer1M: 0,
+    contextLength: 1048576,
+    recommended: false,
+    description: 'Modelo experimental gratuito de Google en OpenRouter. Ideal para pruebas sin costo.',
+  },
+  {
+    id: 'meta-llama/llama-3.3-70b-instruct:free',
+    name: 'Llama 3.3 70B Instruct (Gratuito)',
+    provider: 'Meta',
+    inputCostPer1M: 0,
+    outputCostPer1M: 0,
+    contextLength: 131072,
+    recommended: false,
+    description: 'Modelo de Meta de alta capacidad gratuito en OpenRouter. Para pruebas sin coste.',
+  },
 ];
 
 export async function GET() {
@@ -189,6 +209,42 @@ export async function POST(req: Request) {
   try {
     await requireAuth();
     const body = await req.json();
+
+    if (body.action === 'FETCH_OPENROUTER_MODELS') {
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/models', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (!res.ok) {
+          return NextResponse.json({ ok: false, error: 'No se pudo obtener el catálogo de OpenRouter' }, { status: 502 });
+        }
+
+        const json = await res.json();
+        const allModels = json.data || [];
+
+        // Filtrar modelos gratuitos (que contienen :free o pricing.prompt == 0)
+        const freeModels = allModels
+          .filter((m: any) => m.id.endsWith(':free') || m.id.includes(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0'))
+          .map((m: any) => ({
+            id: m.id,
+            name: `${m.name || m.id} (Gratis)`,
+            provider: m.id.split('/')[0] || 'OpenRouter',
+            inputCostPer1M: 0,
+            outputCostPer1M: 0,
+            contextLength: m.context_length || 32768,
+            recommended: false,
+            isFree: true,
+            description: m.description ? m.description.slice(0, 160) + '...' : 'Modelo gratuito sin costo por token.',
+          }));
+
+        return NextResponse.json({ ok: true, models: freeModels, total: allModels.length });
+      } catch (err: any) {
+        return NextResponse.json({ ok: false, error: err?.message || 'Error consultando modelos' }, { status: 500 });
+      }
+    }
 
     if (body.action === 'TEST_OPENROUTER') {
       const testKey = body.apiKey && body.apiKey.trim().length > 0

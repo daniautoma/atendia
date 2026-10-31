@@ -133,6 +133,15 @@ export async function POST(req: Request) {
             channel: ChannelType.WHATSAPP,
             waProvider: WhatsAppProvider.YCLOUD,
             status: 'BOT_ACTIVE',
+            unreadCount: 1,
+          },
+        });
+      } else {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: {
+            unreadCount: { increment: 1 },
+            lastMessageAt: new Date(),
           },
         });
       }

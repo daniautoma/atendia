@@ -66,6 +66,7 @@ export async function POST(req: Request) {
       services,
       faqs,
       knowledgeNotes: notes,
+      systemPromptOverride: assistant?.systemPromptOverride,
     });
 
     timeline.push({

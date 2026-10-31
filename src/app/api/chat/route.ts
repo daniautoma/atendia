@@ -68,8 +68,17 @@ export async function POST(req: Request) {
           contactId: contact.id,
           channel: ChannelType.WEB,
           status: 'BOT_ACTIVE',
+          unreadCount: 1,
         },
         include: { messages: true },
+      });
+    } else {
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          unreadCount: { increment: 1 },
+          lastMessageAt: new Date(),
+        },
       });
     }
 
@@ -125,6 +134,7 @@ export async function POST(req: Request) {
       services,
       faqs,
       knowledgeNotes: notes,
+      systemPromptOverride: assistant?.systemPromptOverride,
     });
 
     const historyMessages = (conversation.messages || []).map((m) => ({
