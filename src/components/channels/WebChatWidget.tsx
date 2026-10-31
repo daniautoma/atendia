@@ -11,7 +11,7 @@ interface WebChatWidgetProps {
 
 export function WebChatWidget({
   color = '#0d9488',
-  title = 'Atención Clínica Lumen',
+  title = 'Atención Clínica Dental San Salvador',
   welcomeMessage = '¡Hola! ¿Tienes alguna pregunta sobre nuestros tratamientos o deseas pedir cita?',
 }: WebChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);

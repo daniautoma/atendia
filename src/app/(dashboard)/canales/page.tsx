@@ -48,7 +48,7 @@ export default function CanalesPage() {
   // Estados del Chat Web
   const [webEnabled, setWebEnabled] = useState(true);
   const [webColor, setWebColor] = useState('#0d9488');
-  const [webTitle, setWebTitle] = useState('Atención Clínica Lumen');
+  const [webTitle, setWebTitle] = useState('Atención Clínica Dental San Salvador');
   const [webWelcome, setWebWelcome] = useState('¡Hola! ¿Tienes alguna pregunta o deseas pedir cita?');
   const [appUrl, setAppUrl] = useState('http://localhost:3000');
   const [copiedScript, setCopiedScript] = useState(false);
@@ -75,7 +75,7 @@ export default function CanalesPage() {
       if (data.web) {
         setWebEnabled(data.web.enabled ?? true);
         setWebColor(data.web.color || '#0d9488');
-        setWebTitle(data.web.title || 'Atención Clínica Lumen');
+        setWebTitle(data.web.title || 'Atención Clínica Dental San Salvador');
         setWebWelcome(data.web.welcome || '');
       }
       if (data.appUrl) setAppUrl(data.appUrl);

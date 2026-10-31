@@ -259,7 +259,7 @@ export default function ConversacionesPage() {
                         </span>
                       ) : (
                         <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
-                          LumenIA activo
+                          DentalIA activo
                         </span>
                       )}
                     </div>

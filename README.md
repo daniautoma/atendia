@@ -90,4 +90,4 @@ docker compose up -d --build
 - `npm run build`: Validación estricta de compilación y empaquetado Next.js.
 - `npm run prisma:generate`: Regenera los tipos del cliente Prisma.
 - `npm run prisma:push`: Sincroniza cambios del esquema PostgreSQL.
-- `npm run prisma:seed`: Recarga los datos iniciales de la «Clínica Dental Lumen».
+- `npm run prisma:seed`: Recarga los datos iniciales de la «Clínica Dental San Salvador».

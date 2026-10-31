@@ -29,7 +29,7 @@ export async function GET() {
       web: {
         enabled: channelWeb?.webChatEnabled ?? true,
         color: channelWeb?.webChatColor || '#0d9488',
-        title: channelWeb?.webChatTitle || 'Atención Clínica Lumen',
+        title: channelWeb?.webChatTitle || 'Atención Clínica Dental San Salvador',
         welcome: channelWeb?.webChatWelcome || '¡Hola! ¿En qué podemos ayudarte?',
       },
       appUrl: process.env.APP_URL || 'http://localhost:3000',

@@ -9,9 +9,9 @@ export async function GET() {
     if (!config) {
       config = await prisma.assistantConfig.create({
         data: {
-          name: 'LumenIA',
+          name: 'DentalIA',
           tone: 'cercano',
-          welcomeMessage: '¡Hola! Bienvenido a Clínica Dental Lumen. ¿En qué te podemos ayudar hoy?',
+          welcomeMessage: '¡Hola! Bienvenido a Clínica Dental San Salvador. Soy DentalIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
           customInstructions: 'Sé amable y empático.',
           neverDoList: 'No dar diagnósticos médicos.',
           businessHours: {

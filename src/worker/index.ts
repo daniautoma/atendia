@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { prisma } from '../lib/prisma';
 import { getWhatsAppAdapter } from '../lib/channels/whatsapp/factory';
 import { buildSystemPrompt } from '../lib/prompt-builder';
@@ -218,7 +219,7 @@ async function handleInboundMessageJob(payload: {
     waLid: conversation.contact?.waLid || undefined,
   });
 
-  console.log(`[Worker] Respuesta de LumenIA enviada a ${conversation.contact?.waLid || to} (${executedTools.length} tools usadas)`);
+  console.log(`[Worker] Respuesta de DentalIA enviada a ${conversation.contact?.waLid || to} (${executedTools.length} tools usadas)`);
 }
 
 /**

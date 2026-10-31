@@ -137,7 +137,7 @@ export default function ProbarPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Probar Asistente"
-        subtitle="Simula una conversación en tiempo real con LumenIA inspeccionando tools y contexto"
+        subtitle="Simula una conversación en tiempo real con DentalIA inspeccionando tools y contexto"
         actions={
           <div className="flex items-center gap-2">
             {/* Conmutador Modo Seguro */}
@@ -251,7 +251,7 @@ export default function ProbarPage() {
                   <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce delay-100" />
                   <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce delay-200" />
                 </div>
-                <span>LumenIA está escribiendo...</span>
+                <span>DentalIA está escribiendo...</span>
               </div>
             )}
             <div ref={messagesEndRef} />

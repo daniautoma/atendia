@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { prisma } from '@/lib/prisma';
 import { LogStatus } from '@prisma/client';
 
@@ -39,6 +40,7 @@ export async function callOpenRouter(options: ChatCompletionOptions): Promise<Co
 
   // Si no hay API key configurada en .env, devolvemos simulación inteligente
   if (!apiKey || apiKey.trim() === '') {
+    console.warn('[OpenRouter] ⚠️ OPENROUTER_API_KEY no detectada en process.env. Ejecutando simulador local de DentalIA.');
     return simulateOpenRouterResponse(options);
   }
 
@@ -208,7 +210,7 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
         wasFallback: false,
         message: {
           role: 'assistant',
-          content: '¡Perfecto! Tu cita ha quedado reservada y anotada en nuestro calendario. Te enviaremos un recordatorio el día anterior por WhatsApp. ¡Te esperamos en Clínica Dental Lumen!',
+          content: '¡Perfecto! Tu cita ha quedado reservada y anotada en nuestro calendario. Te enviaremos un recordatorio el día anterior por WhatsApp. ¡Te esperamos en Clínica Dental San Salvador!',
         },
       };
     }
@@ -285,7 +287,16 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
   }
 
   // 3. Detección de consulta de servicios / precios
-  if (lastUserMsg.includes('precio') || lastUserMsg.includes('cuanto') || lastUserMsg.includes('cuesta') || lastUserMsg.includes('limpieza') || lastUserMsg.includes('blanqueamiento')) {
+  if (
+    lastUserMsg.includes('precio') ||
+    lastUserMsg.includes('cuanto') ||
+    lastUserMsg.includes('cuesta') ||
+    lastUserMsg.includes('limpieza') ||
+    lastUserMsg.includes('blanqueamiento') ||
+    lastUserMsg.includes('servicio') ||
+    lastUserMsg.includes('ofrecen') ||
+    lastUserMsg.includes('tratamiento')
+  ) {
     return {
       modelUsed: options.model,
       wasFallback: false,
@@ -363,7 +374,7 @@ function simulateOpenRouterResponse(options: ChatCompletionOptions): CompletionR
     wasFallback: false,
     message: {
       role: 'assistant',
-      content: '¡Hola! Soy LumenIA, el asistente de Clínica Dental Lumen. ¿En qué te podemos ayudar hoy? Puedes consultarme sobre nuestras tarifas de limpieza, ortodoncia invisible, o solicitar una cita con el doctor.',
+      content: '¡Hola! Soy DentalIA, el asistente de Clínica Dental San Salvador. ¿En qué te podemos ayudar hoy? Puedes consultarme sobre nuestros servicios odontológicos, precios en USD o agendar tu cita.',
     },
   };
 }

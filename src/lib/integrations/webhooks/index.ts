@@ -33,7 +33,7 @@ export async function dispatchOutgoingWebhook(event: WebhookEvent, payload: Reco
   const bodyString = JSON.stringify({
     event,
     timestamp,
-    business: 'Clínica Dental Lumen',
+    business: 'Clínica Dental San Salvador',
     data: payload,
   });
 

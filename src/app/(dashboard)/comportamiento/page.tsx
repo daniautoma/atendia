@@ -24,7 +24,7 @@ export default function ComportamientoPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Estados del formulario
-  const [name, setName] = useState('LumenIA');
+  const [name, setName] = useState('DentalIA');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [tone, setTone] = useState('cercano');
   const [welcomeMessage, setWelcomeMessage] = useState('');
@@ -60,7 +60,7 @@ export default function ComportamientoPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data) {
-          setName(data.name || 'LumenIA');
+          setName(data.name || 'DentalIA');
           setAvatarUrl(data.avatarUrl || '');
           setTone(data.tone || 'cercano');
           setWelcomeMessage(data.welcomeMessage || '');
@@ -146,7 +146,7 @@ export default function ComportamientoPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Comportamiento del Asistente"
-        subtitle="Configura la personalidad, tono, horarios y reglas de derivación de LumenIA"
+        subtitle="Configura la personalidad, tono, horarios y reglas de derivación de DentalIA"
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -207,7 +207,7 @@ export default function ComportamientoPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                placeholder="ej: LumenIA"
+                placeholder="ej: DentalIA"
               />
             </div>
 
