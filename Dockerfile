@@ -37,7 +37,7 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/dist ./dist
 
-RUN mkdir -p /app/whatsapp-session && chown -R nextjs:nodejs /app
+RUN mkdir -p /app/whatsapp-session && chown -R nextjs:nodejs /app/whatsapp-session
 
 USER nextjs
 

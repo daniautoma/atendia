@@ -16,6 +16,7 @@ services:
 
   # 2. Servidor Web Next.js (Dashboard, Chat Web, API)
   web:
+    image: atendia-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -44,9 +45,7 @@ services:
 
   # 3. Worker de fondo (WhatsApp Baileys, Debounce 8s, Tareas programadas)
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: atendia-app:latest
     container_name: atendia-worker
     user: root
     restart: always
