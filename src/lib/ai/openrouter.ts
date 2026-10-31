@@ -44,14 +44,13 @@ const DEPRECATED_MODELS: Record<string, string> = {
 };
 
 /**
- * Obtiene la API Key de OpenRouter desde el entorno o desde la base de datos (tabla Integration).
+ * Obtiene la API Key de OpenRouter.
+ * Prioriza la clave guardada y actualizada en la base de datos (tabla Integration)
+ * para que cualquier actualización desde la interfaz web (/ajustes) tenga efecto inmediato
+ * y prevalezca sobre claves antiguas o caducadas en el archivo .env.
  */
 export async function getOpenRouterApiKey(): Promise<string | null> {
-  const envKey = process.env.OPENROUTER_API_KEY;
-  if (envKey && envKey.trim().length > 0) {
-    return envKey.trim();
-  }
-
+  // 1. Prioridad: Clave en base de datos (tabla Integration)
   try {
     const integration = await prisma.integration.findUnique({
       where: { provider: 'openrouter' },
@@ -69,7 +68,7 @@ export async function getOpenRouterApiKey(): Promise<string | null> {
           }
         }
       } catch (decErr) {
-        // En caso de que no esté cifrado y se haya guardado en plano
+        // En caso de que se haya guardado en plano
         if (integration.credentialsEnc.startsWith('sk-or-')) {
           process.env.OPENROUTER_API_KEY = integration.credentialsEnc.trim();
           return integration.credentialsEnc.trim();
@@ -78,6 +77,12 @@ export async function getOpenRouterApiKey(): Promise<string | null> {
     }
   } catch (dbErr) {
     console.warn('[OpenRouter] No se pudo leer la API Key de la base de datos:', dbErr);
+  }
+
+  // 2. Respaldo: Variable de entorno (.env o Dokploy)
+  const envKey = process.env.OPENROUTER_API_KEY;
+  if (envKey && envKey.trim().length > 0) {
+    return envKey.trim();
   }
 
   return null;
