@@ -16,7 +16,7 @@ export const ASSISTANT_TOOLS = [
     type: 'function',
     function: {
       name: 'consultar_disponibilidad',
-      description: 'Consulta huecos libres en la agenda para una fecha y franja horaria determinada.',
+      description: 'Consulta huecos libres en la agenda para una fecha y franja horaria determinada. NOTA: La clínica está cerrada los domingos (no hay disponibilidad) y sábados después de las 13:00.',
       parameters: {
         type: 'object',
         properties: {
@@ -37,7 +37,7 @@ export const ASSISTANT_TOOLS = [
     type: 'function',
     function: {
       name: 'agendar_cita',
-      description: 'Agenda y reserva una cita en la clínica. IMPORTANTE: Requiere que el cliente haya confirmado explícitamente el día, la hora, su nombre completo y un número de teléfono válido de El Salvador (+503 de 8 dígitos).',
+      description: 'Agenda y reserva una cita en la clínica. IMPORTANTE: Requiere confirmación expresa del día, la hora, nombre completo y teléfono válido (+503). La clínica está cerrada los domingos.',
       parameters: {
         type: 'object',
         properties: {
@@ -180,18 +180,91 @@ export async function executeToolCall(
       }
 
       case 'consultar_disponibilidad': {
-        const fecha = args.fecha || '2026-11-03';
-        const horaPreferida = args.hora_preferida || '11:00';
+        const fecha = args.fecha || new Date().toISOString().split('T')[0];
+        const horaPreferida = args.hora_preferida || '10:00';
 
-        const huecosDisponibles = ['09:00', '10:30', '14:00', '15:30', '17:00'];
+        // Extraer componentes de fecha sin sufrir desajustes por husos horarios
+        const cleanDate = (fecha || '').split('T')[0].split(' ')[0];
+        const [year, month, day] = cleanDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day, 12, 0, 0);
+        const dayOfWeek = dateObj.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+
+        // Extraer hora preferida en minutos desde medianoche
+        let prefHour = 10;
+        let prefMin = 0;
+        if (horaPreferida && horaPreferida.includes(':')) {
+          const [h, m] = horaPreferida.split(':').map(Number);
+          if (!isNaN(h)) prefHour = h;
+          if (!isNaN(m)) prefMin = m;
+        }
+        const prefMinutes = prefHour * 60 + prefMin;
+
+        // 1. RESTRICCIÓN DOMINGO (Cerrado todo el día)
+        if (dayOfWeek === 0) {
+          return {
+            result: {
+              fecha,
+              cerrado: true,
+              huecosDisponibles: [],
+              error: 'La clínica está cerrada este día/hora. Obligatorio ofrecer el siguiente día hábil.',
+              mensaje: 'La clínica dental está cerrada los domingos. Obligatorio ofrecer el siguiente día hábil (lunes a partir de las 08:30).',
+            },
+            summary: `Cerrado: El día ${fecha} es domingo. La clínica está cerrada; no hay citas disponibles los domingos.`,
+          };
+        }
+
+        // 2. RESTRICCIÓN SÁBADO (08:00 a 13:00)
+        if (dayOfWeek === 6) {
+          const sabadoHuecos = ['08:30', '09:30', '10:30', '11:30', '12:15'];
+          if (prefMinutes >= 13 * 60) {
+            return {
+              result: {
+                fecha,
+                cerrado: true,
+                huecosDisponibles: [],
+                error: 'La clínica está cerrada este día/hora. Obligatorio ofrecer el siguiente día hábil.',
+                mensaje: `Los sábados la clínica atiende únicamente en horario matutino de 08:00 a 13:00. Para la hora ${horaPreferida} ya está cerrada. Ofrece citas matutinas el sábado o para el lunes.`,
+              },
+              summary: `Cerrado: Sábado ${fecha} a las ${horaPreferida} fuera de horario de atención (cierra a las 13:00).`,
+            };
+          }
+
+          return {
+            result: {
+              fecha,
+              cerrado: false,
+              huecosDisponibles: sabadoHuecos,
+              horaPreferidaDisponible: sabadoHuecos.includes(horaPreferida),
+              nota: 'Horario especial de sábado: 08:00 a 13:00 en San Salvador.',
+            },
+            summary: `Disponibilidad consultada para el sábado ${fecha}: 5 huecos matutinos disponibles.`,
+          };
+        }
+
+        // 3. Lunes a Viernes (08:00 a 18:00)
+        const semanaHuecos = ['08:30', '10:00', '11:30', '14:00', '15:30', '17:00'];
+        if (prefMinutes < 8 * 60 || prefMinutes >= 18 * 60) {
+          return {
+            result: {
+              fecha,
+              cerrado: true,
+              huecosDisponibles: [],
+              error: 'La clínica está cerrada este día/hora. Obligatorio ofrecer el siguiente día hábil.',
+              mensaje: `El horario habitual es de lunes a viernes de 08:00 a 18:00. Para la hora solicitada (${horaPreferida}) la clínica se encuentra cerrada. Ofrece citas dentro del horario hábil.`,
+            },
+            summary: `Fuera de horario: ${fecha} a las ${horaPreferida} fuera de horario de atención.`,
+          };
+        }
+
         return {
           result: {
             fecha,
-            huecosDisponibles,
-            horaPreferidaDisponible: huecosDisponibles.includes(horaPreferida),
+            cerrado: false,
+            huecosDisponibles: semanaHuecos,
+            horaPreferidaDisponible: semanaHuecos.includes(horaPreferida),
             nota: 'Huecos de 45 minutos en horario oficial de San Salvador (08:00 - 18:00).',
           },
-          summary: `Disponibilidad consultada para el día ${fecha}: 5 huecos libres encontrados.`,
+          summary: `Disponibilidad consultada para el día ${fecha}: 6 huecos libres encontrados en horario hábil.`,
         };
       }
 
@@ -253,6 +326,68 @@ export async function executeToolCall(
           return {
             result: { error: 'El cliente debe confirmar explícitamente el día y la hora antes de fijar la cita.' },
             summary: 'Bloqueado: Se solicitó confirmación al paciente antes de agendar.',
+          };
+        }
+
+        // 1. Verificación matemática estricta de fecha y hora
+        const rawFechaHora = args.fecha_hora;
+        if (!rawFechaHora) {
+          return {
+            result: {
+              error: 'HORARIO_INVALIDO',
+              mensaje: 'No se especificó la fecha y hora de la cita. Solicita la fecha y hora al paciente.',
+            },
+            summary: 'Rechazado: Fecha y hora no indicadas.',
+          };
+        }
+
+        const cleanDatePart = rawFechaHora.split('T')[0].split(' ')[0];
+        const [appYear, appMonth, appDay] = cleanDatePart.split('-').map(Number);
+        const appDateObj = new Date(appYear, appMonth - 1, appDay, 12, 0, 0);
+        const appDayOfWeek = appDateObj.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+
+        let appHours = 10;
+        let appMinutes = 0;
+        if (rawFechaHora.includes('T') || rawFechaHora.includes(' ')) {
+          const timePart = rawFechaHora.includes('T') ? rawFechaHora.split('T')[1] : rawFechaHora.split(' ')[1];
+          const [h, m] = timePart.split(':').map(Number);
+          if (!isNaN(h)) appHours = h;
+          if (!isNaN(m)) appMinutes = m;
+        }
+        const appTotalMinutes = appHours * 60 + appMinutes;
+
+        // A. RESTRICCIÓN DOMINGO (CERRADO)
+        if (appDayOfWeek === 0) {
+          return {
+            result: {
+              error: 'HORARIO_INVALIDO',
+              mensaje: 'Imposible agendar. La clínica está cerrada los domingos. Pide al usuario otra fecha.',
+            },
+            summary: `Rechazado: La clínica está cerrada los domingos (${rawFechaHora}).`,
+          };
+        }
+
+        // B. RESTRICCIÓN SÁBADO (08:00 a 13:00)
+        if (appDayOfWeek === 6) {
+          if (appTotalMinutes < 8 * 60 || appTotalMinutes >= 13 * 60) {
+            return {
+              result: {
+                error: 'HORARIO_INVALIDO',
+                mensaje: 'Imposible agendar. Los sábados la clínica atiende únicamente de 08:00 a 13:00. Pide al usuario otra fecha o un horario matutino.',
+              },
+              summary: `Rechazado: Sábado fuera de horario (${rawFechaHora}). Atención únicamente de 08:00 a 13:00.`,
+            };
+          }
+        }
+
+        // C. RESTRICCIÓN LUNES A VIERNES (08:00 a 18:00)
+        if (appTotalMinutes < 8 * 60 || appTotalMinutes >= 18 * 60) {
+          return {
+            result: {
+              error: 'HORARIO_INVALIDO',
+              mensaje: 'Imposible agendar. La hora solicitada está fuera del horario de atención clínica (lunes a viernes de 08:00 a 18:00). Pide al usuario otra hora dentro de este rango.',
+            },
+            summary: `Rechazado: Cita fuera del horario de atención clínica (${rawFechaHora}).`,
           };
         }
 
