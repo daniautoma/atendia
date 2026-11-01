@@ -26,9 +26,16 @@ export async function GET() {
         } catch {}
       }
 
+      if (cat.id === 'telegram' && !dbRecord?.credentialsEnc) {
+        if (process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_ADMIN_CHAT_ID) {
+          maskedCreds.botToken = maskSecret(process.env.TELEGRAM_BOT_TOKEN || '');
+          maskedCreds.chatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '';
+        }
+      }
+
       return {
         ...cat,
-        enabled: dbRecord?.enabled ?? false,
+        enabled: dbRecord?.enabled ?? (cat.id === 'telegram' ? !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_ADMIN_CHAT_ID) : false),
         config: (dbRecord?.config as any) || {},
         lastSyncAt: dbRecord?.lastSyncAt,
         maskedCreds,

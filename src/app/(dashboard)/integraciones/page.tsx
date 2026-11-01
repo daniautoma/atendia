@@ -39,6 +39,10 @@ export default function IntegracionesPage() {
   const [isGcpGuideOpen, setIsGcpGuideOpen] = useState(false);
   const [copiedCallback, setCopiedCallback] = useState(false);
 
+  // Estado prueba rápida Telegram
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<any | null>(null);
+
   const fetchIntegrations = async () => {
     try {
       setLoading(true);
@@ -63,6 +67,8 @@ export default function IntegracionesPage() {
     setActiveIntegration(intg);
     setConfigValues(intg.config || {});
     setCredentialValues({});
+    setTestingTelegram(false);
+    setTelegramTestResult(null);
     setIsConfigModalOpen(true);
   };
 
@@ -416,6 +422,99 @@ export default function IntegracionesPage() {
                     }
                     className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs font-mono"
                   />
+                </div>
+              </div>
+            )}
+
+            {activeIntegration.id === 'telegram' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">
+                    Token del Bot de Telegram (Bot Token)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                    value={credentialValues.botToken || ''}
+                    onChange={(e) =>
+                      setCredentialValues({ ...credentialValues, botToken: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs font-mono"
+                  />
+                  {activeIntegration.maskedCreds?.botToken && (
+                    <p className="text-[11px] text-stone-400 mt-1 font-mono">
+                      Token guardado: {activeIntegration.maskedCreds.botToken}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    Token obtenido vía @BotFather al crear tu bot (ej. CrmAtendiaBot).
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">
+                    Chat ID del Administrador
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="87847949"
+                    value={credentialValues.chatId || ''}
+                    onChange={(e) =>
+                      setCredentialValues({ ...credentialValues, chatId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-stone-300 text-xs font-mono"
+                  />
+                  {activeIntegration.maskedCreds?.chatId && (
+                    <p className="text-[11px] text-stone-400 mt-1 font-mono">
+                      Chat ID guardado: {activeIntegration.maskedCreds.chatId}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    Tu ID numérico de chat personal (ej. 87847949) o ID de grupo.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setTestingTelegram(true);
+                      setTelegramTestResult(null);
+                      try {
+                        const res = await fetch('/api/integrations/telegram/test', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            botToken: credentialValues.botToken,
+                            chatId: credentialValues.chatId,
+                          }),
+                        });
+                        const data = await res.json();
+                        setTelegramTestResult(data);
+                      } catch (err: any) {
+                        setTelegramTestResult({ ok: false, message: err.message });
+                      } finally {
+                        setTestingTelegram(false);
+                      }
+                    }}
+                    disabled={testingTelegram}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300 bg-sky-50 text-sky-700 text-xs font-semibold hover:bg-sky-100 transition-colors disabled:opacity-50"
+                  >
+                    <span>{testingTelegram ? 'Enviando prueba...' : '⚡ Probar Conexión con Telegram'}</span>
+                  </button>
+
+                  {telegramTestResult && (
+                    <div
+                      className={`mt-2 p-2 rounded-lg text-xs flex items-start gap-1.5 ${
+                        telegramTestResult.ok
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-800 border border-rose-200'
+                      }`}
+                    >
+                      <span className="font-bold">{telegramTestResult.ok ? '✓' : '✕'}</span>
+                      <span>{telegramTestResult.message}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

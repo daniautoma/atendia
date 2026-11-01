@@ -67,6 +67,16 @@ export const INTEGRATIONS_CATALOG: IntegrationDefinition[] = [
     ],
   },
   {
+    id: 'telegram',
+    name: 'Telegram (Alertas)',
+    description: 'Alertas internas inmediatas a Telegram cuando un paciente requiere intervención humana (WAITING_HUMAN).',
+    category: 'notificaciones',
+    authType: 'CUSTOM',
+    capabilities: [
+      { key: 'notify_handoff', label: 'Avisar cuando se pasa a humano', description: 'Envía alerta con el motivo, paciente y botón para abrir el panel', default: true },
+    ],
+  },
+  {
     id: 'stripe',
     name: 'Stripe',
     description: 'Cobro de depósitos o señales de reserva mediante enlaces de pago seguros de Stripe Checkout generados en la conversación.',
