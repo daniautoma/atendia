@@ -94,12 +94,19 @@ export async function POST(req: Request) {
     const isExplicitHumanRequest =
       normalizedText.includes('atencion humana') ||
       normalizedText.includes('atención humana') ||
+      normalizedText.includes('intervencion humana') ||
+      normalizedText.includes('intervención humana') ||
       normalizedText.includes('hablar con un humano') ||
       normalizedText.includes('hablar con una persona') ||
       normalizedText.includes('pasar a humano') ||
       normalizedText.includes('asesor humano') ||
       normalizedText.includes('un humano') ||
-      normalizedText.includes('quiero un humano');
+      normalizedText.includes('quiero un humano') ||
+      normalizedText.includes('agente humano') ||
+      normalizedText.includes('con un humano') ||
+      normalizedText.includes('persona real') ||
+      normalizedText.includes('operador') ||
+      normalizedText.includes('asistencia humana');
 
     if (isExplicitHumanRequest) {
       const handoffMsg = 'Entendido. He transferido tu conversación a nuestro equipo de atención humana. Un asesor de la clínica te responderá en unos instantes.';

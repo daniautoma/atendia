@@ -4,6 +4,7 @@ import { getWhatsAppAdapter } from '../lib/channels/whatsapp/factory';
 import { buildSystemPrompt } from '../lib/prompt-builder';
 import { callOpenRouter, OpenRouterMessage } from '../lib/ai/openrouter';
 import { ASSISTANT_TOOLS, executeToolCall } from '../lib/ai/tools';
+import { sendTelegramAlert } from '../lib/integrations/telegram/alert';
 import { sendGmailEmail } from '../lib/integrations/google/gmail';
 import { MessageSender, LogStatus, ConnectionStatus } from '@prisma/client';
 
@@ -127,12 +128,19 @@ async function handleInboundMessageJob(payload: {
   const isExplicitHumanRequest =
     normalizedText.includes('atencion humana') ||
     normalizedText.includes('atención humana') ||
+    normalizedText.includes('intervencion humana') ||
+    normalizedText.includes('intervención humana') ||
     normalizedText.includes('hablar con un humano') ||
     normalizedText.includes('hablar con una persona') ||
     normalizedText.includes('pasar a humano') ||
     normalizedText.includes('asesor humano') ||
     normalizedText.includes('un humano') ||
-    normalizedText.includes('quiero un humano');
+    normalizedText.includes('quiero un humano') ||
+    normalizedText.includes('agente humano') ||
+    normalizedText.includes('con un humano') ||
+    normalizedText.includes('persona real') ||
+    normalizedText.includes('operador') ||
+    normalizedText.includes('asistencia humana');
 
   if (isExplicitHumanRequest) {
     const handoffMsg = 'Entendido perfectamente. He transferido tu conversación a nuestro equipo clínico para que un asesor te atienda personalmente por aquí en unos momentos.';
@@ -288,6 +296,19 @@ async function handleInboundMessageJob(payload: {
         needsHumanReason: 'Derivado automáticamente a equipo humano (Intermitencia técnica de IA)',
       },
     }).catch(() => {});
+
+    const contactName = conversation.contact?.name || conversation.contact?.phone || 'Paciente';
+    const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+    const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
+    const telegramMessage = [
+      '🚨 *Atención Requerida*',
+      `El paciente *${contactName}* necesita asistencia humana.`,
+      `*Motivo:* Derivado automáticamente a equipo humano (Intermitencia técnica de IA)`,
+      `*Canal:* WhatsApp`,
+      `[Abrir Panel](${panelUrl})`,
+    ].join('\n');
+
+    sendTelegramAlert(telegramMessage).catch(() => {});
   }
 
   // Guardar mensaje generado por el asistente

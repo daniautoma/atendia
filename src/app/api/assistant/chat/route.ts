@@ -39,6 +39,56 @@ export async function POST(req: Request) {
       timestamp: nowSV,
     });
 
+    // Detección directa de solicitud expresa de atención humana
+    const normalizedText = (message || '').toLowerCase().trim();
+    const isExplicitHumanRequest =
+      normalizedText.includes('atencion humana') ||
+      normalizedText.includes('atención humana') ||
+      normalizedText.includes('intervencion humana') ||
+      normalizedText.includes('intervención humana') ||
+      normalizedText.includes('hablar con un humano') ||
+      normalizedText.includes('hablar con una persona') ||
+      normalizedText.includes('pasar a humano') ||
+      normalizedText.includes('asesor humano') ||
+      normalizedText.includes('un humano') ||
+      normalizedText.includes('quiero un humano') ||
+      normalizedText.includes('agente humano') ||
+      normalizedText.includes('con un humano') ||
+      normalizedText.includes('persona real') ||
+      normalizedText.includes('operador') ||
+      normalizedText.includes('asistencia humana');
+
+    if (isExplicitHumanRequest) {
+      const handoffMsg = 'Entendido. He transferido tu solicitud a nuestro equipo de atención humana. Un asesor de la clínica te responderá en unos instantes.';
+      timeline.push({
+        step: 'HANDOFF_TRIGGERED',
+        title: 'Derivación expresa a humano detectada',
+        detail: { motivo: message },
+        timestamp: nowSV,
+      });
+
+      const toolResult = await executeToolCall('pasar_a_humano', {
+        motivo: 'Solicitud expresa del cliente: ' + message,
+        urgencia: 'alta',
+      }, {
+        safeMode,
+        conversationId,
+      });
+
+      timeline.push({
+        step: 'TOOL_RESULT',
+        title: 'Resultado de pasar_a_humano',
+        detail: toolResult.result,
+        timestamp: nowSV,
+      });
+
+      return NextResponse.json({
+        response: handoffMsg,
+        toolCalls: [{ tool: 'pasar_a_humano', args: { motivo: message }, result: toolResult.result }],
+        timeline,
+      });
+    }
+
     // 2. Obtener contexto de configuración
     const [assistant, business, services, faqs, notes] = await Promise.all([
       prisma.assistantConfig.findFirst(),

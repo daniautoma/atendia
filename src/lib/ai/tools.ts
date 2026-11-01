@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { LogStatus } from '@prisma/client';
 import { sendSlackNotification } from '@/lib/integrations/slack';
+import { sendTelegramAlert } from '@/lib/integrations/telegram/alert';
 import {
   saveOrUpdateLeadInSheets,
   recordAppointmentInSheets,
@@ -682,22 +683,52 @@ export async function executeToolCall(
       }
 
       case 'pasar_a_humano': {
+        let contactName = 'Paciente';
+        let channelName = 'WhatsApp / Web';
+
         if (ctx.conversationId) {
-          await prisma.conversation.update({
+          const conv = await prisma.conversation.update({
             where: { id: ctx.conversationId },
             data: {
               status: 'WAITING_HUMAN',
               needsHumanReason: `${args.urgencia?.toUpperCase()}: ${args.motivo}`,
             },
-          }).catch(() => {});
+            include: { contact: true },
+          }).catch(() => null);
+
+          if (conv) {
+            contactName = conv.contact?.name || conv.contact?.phone || 'Paciente';
+            channelName = conv.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web';
+          }
+        } else if (ctx.contactId) {
+          const contact = await prisma.contact.findUnique({
+            where: { id: ctx.contactId },
+          }).catch(() => null);
+          if (contact) {
+            contactName = contact.name || contact.phone || 'Paciente';
+          }
         }
 
         // Avisar inmediatamente a Slack y Webhook
         sendSlackNotification(`Pase a Humano (${args.urgencia?.toUpperCase()})`, {
           'Motivo': args.motivo,
           'Urgencia': args.urgencia,
-          'Canal': 'WhatsApp / Web',
+          'Canal': channelName,
         }).catch(() => {});
+
+        // Alerta interna unidireccional por Telegram al administrador
+        const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+        const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
+        const telegramMessage = [
+          '🚨 *Atención Requerida*',
+          `El paciente *${contactName}* necesita asistencia humana.`,
+          `*Motivo:* ${args.motivo || 'No especificado'}`,
+          `*Urgencia:* ${args.urgencia || 'normal'}`,
+          `*Canal:* ${channelName}`,
+          `[Abrir Panel](${panelUrl})`,
+        ].join('\n');
+
+        sendTelegramAlert(telegramMessage).catch(() => {});
 
         dispatchOutgoingWebhook('handoff.triggered', {
           urgency: args.urgencia,
@@ -711,7 +742,7 @@ export async function executeToolCall(
             estado: 'WAITING_HUMAN',
             motivo: args.motivo,
             urgencia: args.urgencia,
-            notificacionEnviada: 'Slack y Webhooks alertados en tiempo real',
+            notificacionEnviada: 'Slack, Telegram y Webhooks alertados en tiempo real',
           },
           summary: `Conversación derivada a un agente humano (${args.urgencia}): ${args.motivo}`,
         };

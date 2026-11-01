@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { getWhatsAppAdapter } from '@/lib/channels/whatsapp/factory';
 import { MessageSender } from '@prisma/client';
+import { sendTelegramAlert } from '@/lib/integrations/telegram/alert';
 
 export async function GET(
   req: Request,
@@ -69,6 +70,22 @@ export async function POST(
           needsHumanReason: `Tomado manualmente por ${session.name}`,
         },
       });
+
+      const contactName = conversation.contact?.name || conversation.contact?.phone || 'Paciente';
+      const channelName = conversation.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web';
+      const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+      const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
+
+      const telegramMessage = [
+        '🚨 *Atención Requerida (Intervención Manual)*',
+        `El operador *${session.name}* ha tomado el control del paciente *${contactName}*.`,
+        `*Motivo:* Tomado manualmente desde el panel por ${session.name}`,
+        `*Canal:* ${channelName}`,
+        `[Abrir Panel](${panelUrl})`,
+      ].join('\n');
+
+      sendTelegramAlert(telegramMessage).catch(() => {});
+
       return NextResponse.json({ success: true, conversation: updated });
     }
 
