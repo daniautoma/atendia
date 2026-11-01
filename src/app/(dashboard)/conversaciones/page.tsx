@@ -18,6 +18,7 @@ import {
   Sparkles,
   Phone,
   Globe,
+  ArrowLeft,
 } from 'lucide-react';
 
 export default function ConversacionesPage() {
@@ -190,7 +191,11 @@ export default function ConversacionesPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* COLUMNA IZQUIERDA: LISTA DE CONVERSACIONES */}
-        <div className="w-80 md:w-96 bg-white border-r border-stone-200 flex flex-col shrink-0">
+        <div
+          className={`w-full md:w-96 bg-white border-r border-stone-200 flex flex-col shrink-0 ${
+            selectedId ? 'hidden md:flex' : 'flex'
+          }`}
+        >
           {/* Filtros */}
           <div className="p-3 border-b border-stone-100 flex gap-1.5 overflow-x-auto text-[11px] font-semibold">
             {[
@@ -294,20 +299,31 @@ export default function ConversacionesPage() {
         </div>
 
         {/* COLUMNA DERECHA: CONVERSACIÓN SELECCIONADA */}
-        <div className="flex-1 flex flex-col bg-stone-50 overflow-hidden">
+        <div
+          className={`flex-1 flex flex-col bg-stone-50 overflow-hidden ${
+            !selectedId ? 'hidden md:flex' : 'flex'
+          }`}
+        >
           {activeConv ? (
             <>
               {/* Cabecera del chat activo con botón Tomar Control */}
-              <div className="px-6 py-3.5 bg-white border-b border-stone-200 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+              <div className="px-4 sm:px-6 py-3.5 bg-white border-b border-stone-200 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="md:hidden p-1.5 -ml-1 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
+                    aria-label="Volver a la lista"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                     {activeConv.contact?.name?.[0] || 'C'}
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-stone-900">
+                    <h4 className="text-sm font-bold text-stone-900 truncate">
                       {activeConv.contact?.name || 'Paciente'}
                     </h4>
-                    <p className="text-[11px] text-stone-500">
+                    <p className="text-[11px] text-stone-500 truncate">
                       {activeConv.contact?.phone || activeConv.contact?.webSessionId} • {activeConv.channel}
                     </p>
                   </div>

@@ -62,7 +62,7 @@ export default function ResumenPage() {
         subtitle="Métricas de atención en tiempo real, canales activos y estado de integraciones"
       />
 
-      <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-6xl">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 max-w-6xl">
         {/* 1. Métricas Principales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-2xl bg-white border border-stone-200 shadow-2xs">
@@ -248,7 +248,7 @@ export default function ResumenPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[600px]">
                 <thead>
                   <tr className="border-b border-stone-100 text-stone-400 font-medium">
                     <th className="pb-2">Paciente</th>

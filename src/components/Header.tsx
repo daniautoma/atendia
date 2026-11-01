@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Power, Clock } from 'lucide-react';
+import { Power, Clock, Menu } from 'lucide-react';
+import { useMobileNav } from '@/components/MobileNavContext';
 
 interface HeaderProps {
   title: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, actions }: HeaderProps) {
+  const { toggle } = useMobileNav();
   const [isActive, setIsActive] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -62,13 +64,24 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 px-8 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
-      <div>
-        <h2 className="text-xl font-bold text-stone-900 leading-tight">{title}</h2>
-        {subtitle && <p className="text-xs text-stone-500 mt-0.5">{subtitle}</p>}
+    <header className="h-16 px-4 sm:px-8 bg-white border-b border-stone-200 flex items-center justify-between shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label="Abrir menú"
+          className="md:hidden p-2 -ml-2 rounded-xl text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer shrink-0"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-stone-900 leading-tight truncate">{title}</h2>
+          {subtitle && <p className="text-xs text-stone-500 mt-0.5 truncate hidden sm:block">{subtitle}</p>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Hora oficial en El Salvador */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 text-stone-600 text-xs font-mono">
           <Clock className="w-3.5 h-3.5 text-stone-400" />
@@ -79,7 +92,7 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
         <button
           onClick={toggleAssistant}
           disabled={loading}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs ${
+          className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full text-xs font-semibold transition-all border shadow-xs ${
             isActive
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
               : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
@@ -91,7 +104,8 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
               isActive ? 'text-emerald-600 animate-pulse' : 'text-amber-600'
             }`}
           />
-          <span>{isActive ? 'Asistente Encendido' : 'Asistente en Pausa'}</span>
+          <span className="hidden sm:inline">{isActive ? 'Asistente Encendido' : 'Asistente en Pausa'}</span>
+          <span className="sm:hidden">{isActive ? 'Activo' : 'Pausa'}</span>
         </button>
 
         {actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -99,4 +113,3 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
     </header>
   );
 }
-

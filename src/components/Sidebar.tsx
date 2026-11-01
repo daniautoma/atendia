@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -19,7 +19,9 @@ import {
   Building2,
   UserCheck,
   Shield,
+  X,
 } from 'lucide-react';
+import { useMobileNav } from '@/components/MobileNavContext';
 
 interface SidebarProps {
   businessName?: string;
@@ -38,6 +40,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isOpen, close } = useMobileNav();
 
   const isAgent = userRole === 'AGENT';
 
@@ -70,8 +73,8 @@ export function Sidebar({
     }
   };
 
-  return (
-    <aside className="w-64 bg-stone-900 text-stone-200 flex flex-col h-screen border-r border-stone-800 shrink-0">
+  const renderContent = (onItemClick?: () => void) => (
+    <>
       {/* Cabecera de la Marca */}
       <div className="p-5 border-b border-stone-800">
         <div className="flex items-center gap-2.5">
@@ -114,6 +117,7 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onItemClick}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-teal-600 text-white shadow-xs font-semibold'
@@ -152,6 +156,7 @@ export function Sidebar({
         <Link
           href="/demo"
           target="_blank"
+          onClick={onItemClick}
           className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium text-stone-300 hover:text-white hover:bg-stone-800/70 transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -162,13 +167,51 @@ export function Sidebar({
         </Link>
 
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            onItemClick?.();
+            handleLogout();
+          }}
           className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 transition-colors cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>Cerrar sesión</span>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* 1. Sidebar de Escritorio: Oculto en pantallas pequeñas (< md), fijo y visible en pantallas grandes (>= md) */}
+      <aside className="hidden md:flex w-64 bg-stone-900 text-stone-200 flex-col h-screen border-r border-stone-800 shrink-0">
+        {renderContent()}
+      </aside>
+
+      {/* 2. Menú Móvil Off-Canvas / Modal con Backdrop */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex" role="dialog" aria-modal="true">
+          {/* Backdrop con desenfoque suave */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={close}
+            aria-hidden="true"
+          />
+
+          {/* Panel Lateral Deslizable */}
+          <aside className="relative w-72 max-w-[85vw] bg-stone-900 text-stone-200 h-full flex flex-col shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            {/* Botón Cerrar (X) */}
+            <button
+              onClick={close}
+              className="absolute top-4 right-4 p-2 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors cursor-pointer z-20"
+              aria-label="Cerrar navegación"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {renderContent(close)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

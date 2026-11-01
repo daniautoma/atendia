@@ -190,7 +190,7 @@ export default function CanalesPage() {
         subtitle="Configura WhatsApp (Baileys QR o API Oficial YCloud) y el Chat Web embeddable"
       />
 
-      <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-5xl">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 max-w-5xl">
         {error && (
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />

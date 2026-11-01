@@ -352,9 +352,9 @@ export default function CalendarioPage() {
       )}
 
       {/* Barra de Controles Superior */}
-      <div className="px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200 bg-white">
+      <div className="px-4 sm:px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200 bg-white">
         {/* Navegación y Título de Fecha */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center bg-stone-100 rounded-xl p-1 border border-stone-200">
             <button
               onClick={handlePrev}
@@ -378,7 +378,7 @@ export default function CalendarioPage() {
             </button>
           </div>
 
-          <h2 className="text-lg font-bold text-stone-900 capitalize min-w-[200px]">
+          <h2 className="text-base sm:text-lg font-bold text-stone-900 capitalize min-w-[160px] sm:min-w-[200px]">
             {format(currentDate, viewMode === 'month' ? 'MMMM yyyy' : "'Semana del' d 'de' MMMM", {
               locale: es,
             })}
@@ -440,15 +440,16 @@ export default function CalendarioPage() {
       </div>
 
       {/* Contenido Principal según ViewMode */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
           </div>
         ) : viewMode === 'month' ? (
           /* =================== VISTA MENSUAL =================== */
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col min-h-[640px]">
-            {/* Cabecera de días de la semana */}
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-x-auto flex flex-col min-h-[640px]">
+            <div className="min-w-[700px] flex-1 flex flex-col">
+              {/* Cabecera de días de la semana */}
             <div className="grid grid-cols-7 border-b border-stone-200 bg-stone-50/80 text-stone-600 text-xs font-bold py-2.5 text-center">
               <div>Lun</div>
               <div>Mar</div>
@@ -535,10 +536,12 @@ export default function CalendarioPage() {
               })}
             </div>
           </div>
+        </div>
         ) : viewMode === 'week' ? (
           /* =================== VISTA SEMANAL =================== */
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-hidden flex flex-col min-h-[600px]">
-            <div className="grid grid-cols-7 border-b border-stone-200 bg-stone-50/80 text-stone-600 text-xs font-bold py-3 text-center divide-x divide-stone-100">
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-x-auto flex flex-col min-h-[600px]">
+            <div className="min-w-[700px] flex-1 flex flex-col">
+              <div className="grid grid-cols-7 border-b border-stone-200 bg-stone-50/80 text-stone-600 text-xs font-bold py-3 text-center divide-x divide-stone-100">
               {weekDays.map((day, i) => (
                 <div key={i} className="flex flex-col items-center">
                   <span className="text-stone-400 font-normal uppercase text-[10px]">
@@ -603,6 +606,7 @@ export default function CalendarioPage() {
               })}
             </div>
           </div>
+        </div>
         ) : (
           /* =================== VISTA LISTA / AGENDA =================== */
           <div className="bg-white rounded-2xl border border-stone-200 shadow-2xs overflow-hidden p-6 space-y-6">
@@ -639,7 +643,7 @@ export default function CalendarioPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[650px]">
                   <thead>
                     <tr className="border-b border-stone-200 text-stone-400 font-semibold uppercase tracking-wider text-[10px]">
                       <th className="pb-3">Fecha y Hora</th>
