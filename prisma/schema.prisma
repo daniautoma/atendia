@@ -246,3 +246,132 @@ model WorkerJob {
   @@index([status, scheduledFor])
 }
 
+// ==============================================================================
+// MÓDULO PRIVADO HQ — CUARTEL GENERAL DANIAUTOMA
+// ==============================================================================
+
+enum HqLeadStatus {
+  NEW
+  ANALYZED
+  CONTACTED
+  REPLIED
+  MEETING
+  WON
+  LOST
+}
+
+enum HqTaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum HqTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model HqLead {
+  id               String        @id @default(cuid())
+  name             String
+  niche            String
+  contactInfo      String
+  status           HqLeadStatus  @default(NEW)
+  value            Float?
+  notes            String?       @db.Text
+  
+  // Campos de Radar de Clientes
+  placeId          String?       @unique
+  formattedAddress String?
+  latitude         Float?
+  longitude        Float?
+  phone            String?
+  websiteUri       String?
+  hasOwnWebsite    Boolean       @default(false)
+  platformType     String?       // 'none' | 'owned' | 'social' | 'directory' | 'linkhub'
+  businessStatus   String?       // 'OPERATIONAL' | 'CLOSED_TEMPORARILY' | 'CLOSED_PERMANENTLY'
+  rating           Float?
+  userRatingCount  Int?
+  category         String?
+  googleMapsUri    String?
+  nextActionDate   DateTime?
+  
+  // Auditoría y scoring
+  provisionalScore Int?
+  finalScore       Int?
+  scoreBreakdown   Json?         // Desglose de puntos de oportunidad
+  pageSpeedAudit   Json?         // Métricas Lighthouse + base64 screenshot
+  aiAnalysis       Json?         // Análisis estructurado de Gemini
+  pitches          Json?         // WhatsApp, llamadas 30s, correo generados
+  
+  tasks            HqTask[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([placeId])
+}
+
+model HqTask {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?        @db.Text
+  status        HqTaskStatus   @default(TODO)
+  priority      HqTaskPriority @default(MEDIUM)
+  isAiGenerated Boolean        @default(false)
+  leadId        String?
+  lead          HqLead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  dueDate       DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status, priority])
+}
+
+model HqWeeklyGoal {
+  id            String    @id @default(cuid())
+  visionText    String    @db.Text
+  aiFeedback    String?   @db.Text
+  weekStartDate DateTime
+  weekEndDate   DateTime
+  isCompleted   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  @@index([weekStartDate, weekEndDate])
+}
+
+model HqRadarSearchCache {
+  id            String   @id @default(cuid())
+  cacheKey      String   @unique // Ej: "san_salvador:dentistas"
+  zone          String
+  niche         String
+  results       Json     // Array de negocios encontrados
+  nextPageToken String?
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime // TTL 48h
+
+  @@index([cacheKey, expiresAt])
+}
+
+model HqRadarUsage {
+  id            String   @id @default(cuid())
+  monthYear     String   @unique // Ej: "2026-11"
+  placesCalls   Int      @default(0)
+  limitAlert    Int      @default(800)
+  updatedAt     DateTime @updatedAt
+}
+
+model HqRadarSettings {
+  id                 String   @id @default("default")
+  sellerName         String   @default("Daniel")
+  agencyName         String   @default("danIAutoma")
+  servicesOffered    Json?    // Lista editable de servicios de la agencia
+  valueProposition   String   @db.Text @default("Ayudamos a negocios en El Salvador a captar y agendar más clientes 24/7 con agentes de IA en WhatsApp, sitios web modernos y automatización.")
+  defaultTone        String   @default("cercano")
+  placesMonthlyLimit Int      @default(800)
+  updatedAt          DateTime @updatedAt
+}
+
+

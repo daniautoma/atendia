@@ -20,6 +20,7 @@ import {
   UserCheck,
   Shield,
   X,
+  Terminal,
 } from 'lucide-react';
 import { useMobileNav } from '@/components/MobileNavContext';
 
@@ -152,6 +153,22 @@ export function Sidebar({
             </div>
           </div>
         </div>
+
+        {!isAgent && (
+          <Link
+            href="/hq"
+            onClick={onItemClick}
+            className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold bg-zinc-800/80 text-cyan-400 hover:text-cyan-300 hover:bg-zinc-800 hover:border-cyan-500/40 border border-zinc-700/60 transition-all shadow-xs group"
+          >
+            <span className="flex items-center gap-2">
+              <Terminal className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              Cuartel General (HQ)
+            </span>
+            <span className="text-[10px] bg-cyan-950/80 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-800/40 font-mono">
+              danIAutoma
+            </span>
+          </Link>
+        )}
 
         <Link
           href="/demo"

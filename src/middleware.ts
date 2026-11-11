@@ -49,7 +49,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 4. Aplicar control de acceso por roles (RBAC) para rol AGENT
+  // 4. Protección estricta para Cuartel General (/hq y /api/hq) — Exclusivo ADMIN
+  if (pathname.startsWith('/hq') || pathname.startsWith('/api/hq')) {
+    if (userRole !== 'ADMIN') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Acceso denegado: Cuartel General es exclusivo para Administrador' },
+          { status: 403 }
+        );
+      }
+      return NextResponse.redirect(new URL('/conversaciones', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // 5. Aplicar control de acceso por roles (RBAC) para rol AGENT
   if (userRole === 'AGENT') {
     // Si es una petición a la API
     if (pathname.startsWith('/api/')) {

@@ -19,6 +19,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.13",
     "@electric-sql/pglite-socket": "^0.2.16",
+    "@google/genai": "^3.0.0",
     "@prisma/client": "^6.4.1",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "bcryptjs": "^3.0.3",
