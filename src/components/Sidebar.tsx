@@ -33,9 +33,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  businessName = 'Clínica Dental San Salvador',
+  businessName = 'danIAutoma',
   assistantActive = true,
-  agencyName = 'Agencia Atendia',
+  agencyName = 'danIAutoma',
   userRole = 'AGENT',
   userName = 'Usuario',
 }: SidebarProps) {

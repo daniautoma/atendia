@@ -80,22 +80,19 @@ export default function CalendarioPage() {
     patientName: '',
     phone: '',
     email: '',
-    serviceName: 'Limpieza Dental Ultrasónica',
+    serviceName: 'Llamada de Diagnóstico Estratégico',
     date: format(new Date(), 'yyyy-MM-dd'),
     time: '10:00',
-    durationMinutes: 45,
+    durationMinutes: 30,
     notes: '',
   });
 
   // Services list for dropdown
   const [servicesList, setServicesList] = useState<string[]>([
-    'Limpieza Dental Ultrasónica',
-    'Blanqueamiento Dental LED',
-    'Consulta y Diagnóstico General',
-    'Endodoncia Unirradicular',
-    'Ortodoncia / Alineadores Invisibles',
-    'Implante Dental de Titanio',
-    'Extracción Simple / Muela del Juicio',
+    'Llamada de Diagnóstico Estratégico',
+    'Agente de IA Omnicanal (WhatsApp + Web + CRM)',
+    'Automatización de Flujos con n8n',
+    'Landing Page de Alta Conversión',
   ]);
 
   // Cargar citas desde API
@@ -175,7 +172,7 @@ export default function CalendarioPage() {
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.patientName.trim()) {
-      showToast('Por favor introduce el nombre del paciente', 'error');
+      showToast('Por favor introduce el nombre del cliente', 'error');
       return;
     }
 
@@ -214,7 +211,7 @@ export default function CalendarioPage() {
         patientName: '',
         phone: '',
         email: '',
-        serviceName: servicesList[0] || 'Limpieza Dental',
+        serviceName: servicesList[0] || 'Llamada de Diagnóstico Estratégico',
         date: format(new Date(), 'yyyy-MM-dd'),
         time: '10:00',
         durationMinutes: 45,
@@ -329,8 +326,8 @@ export default function CalendarioPage() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
-        title="Calendario Odontológico"
-        subtitle="Gestión de citas, agenda clínica y sincronización automática con Google Calendar"
+        title="Calendario y Citas"
+        subtitle="Gestión de citas, agenda estratégica y sincronización automática con Google Calendar"
       />
 
       {/* Alerta flotante de feedback */}
@@ -524,7 +521,7 @@ export default function CalendarioPage() {
                               <span className="font-mono text-[10px]">
                                 {format(parseISO(appt.startTime), 'HH:mm')}
                               </span>
-                              <span className="truncate">{appt.contact.name || 'Paciente'}</span>
+                              <span className="truncate">{appt.contact.name || 'Cliente'}</span>
                             </div>
                             <div className="text-[10px] opacity-75 truncate">{appt.serviceName}</div>
                           </div>
@@ -588,7 +585,7 @@ export default function CalendarioPage() {
                             )}
                           </div>
                           <p className="font-bold text-stone-900 truncate">
-                            {appt.contact.name || 'Paciente'}
+                            {appt.contact.name || 'Cliente'}
                           </p>
                           <p className="text-[11px] text-teal-800 font-medium truncate">
                             {appt.serviceName}
@@ -616,7 +613,7 @@ export default function CalendarioPage() {
                 <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Buscar por paciente, teléfono o servicio..."
+                  placeholder="Buscar por cliente, teléfono o servicio..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:outline-teal-600 focus:border-teal-600"
@@ -647,9 +644,9 @@ export default function CalendarioPage() {
                   <thead>
                     <tr className="border-b border-stone-200 text-stone-400 font-semibold uppercase tracking-wider text-[10px]">
                       <th className="pb-3">Fecha y Hora</th>
-                      <th className="pb-3">Paciente</th>
+                      <th className="pb-3">Cliente</th>
                       <th className="pb-3">Contacto</th>
-                      <th className="pb-3">Tratamiento</th>
+                      <th className="pb-3">Servicio</th>
                       <th className="pb-3">Estado</th>
                       <th className="pb-3">Sincronización</th>
                       <th className="pb-3 text-right">Acción</th>
@@ -664,7 +661,7 @@ export default function CalendarioPage() {
                           })}
                         </td>
                         <td className="py-3.5 font-bold text-stone-900">
-                          {appt.contact.name || 'Paciente sin nombre'}
+                          {appt.contact.name || 'Cliente sin nombre'}
                         </td>
                         <td className="py-3.5 text-stone-500 font-mono">
                           <div>{appt.contact.phone || '—'}</div>
@@ -722,7 +719,7 @@ export default function CalendarioPage() {
                   <CalendarIcon className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-stone-900">Agendar Cita Odontológica</h3>
+                  <h3 className="text-base font-bold text-stone-900">Agendar Cita / Sesión</h3>
                   <p className="text-xs text-stone-500">
                     Se creará en la agenda y sincronizará en Google Calendar si está habilitado
                   </p>
@@ -739,7 +736,7 @@ export default function CalendarioPage() {
             <form onSubmit={handleCreateAppointment} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Nombre Completo del Paciente *
+                  Nombre Completo del Cliente *
                 </label>
                 <input
                   type="text"
@@ -770,7 +767,7 @@ export default function CalendarioPage() {
                   </label>
                   <input
                     type="email"
-                    placeholder="paciente@correo.com"
+                    placeholder="cliente@correo.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-stone-200 focus:outline-teal-600"
@@ -835,11 +832,11 @@ export default function CalendarioPage() {
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Notas Clínicas o Motivo de Consulta
+                  Notas o Requerimientos de la Sesión
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Ej: Paciente refiere dolor en molar superior derecho."
+                  placeholder="Ej: Cliente interesado en automatizar WhatsApp con n8n y Google Calendar."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-stone-200 focus:outline-teal-600"
@@ -879,11 +876,11 @@ export default function CalendarioPage() {
             <div className="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
-                  {selectedAppointment.contact.name?.[0] || 'P'}
+                  {selectedAppointment.contact.name?.[0] || 'C'}
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-stone-900">
-                    {selectedAppointment.contact.name || 'Paciente'}
+                    {selectedAppointment.contact.name || 'Cliente'}
                   </h3>
                   <p className="text-xs text-stone-500 font-mono">
                     ID: {selectedAppointment.id.substring(0, 10)}...

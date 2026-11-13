@@ -538,7 +538,7 @@ export async function updateAppointmentStatusInSheets(options: UpdateAppointment
       }
     }
 
-    // Búsqueda alternativa por nombre del paciente si no se encontró por teléfono
+    // Búsqueda alternativa por nombre del cliente si no se encontró por teléfono
     if (matchedRowIndex === -1 && options.patientName && rows.length > 1) {
       const targetName = options.patientName.toLowerCase().trim();
       for (let i = rows.length - 1; i >= 1; i--) {
@@ -604,7 +604,7 @@ export async function recordLeadInGoogleSheets(lead: {
     return recordAppointmentInSheets({
       name: lead.name,
       phone: lead.phone,
-      service: lead.service || lead.notes || 'Consulta odontológica',
+      service: lead.service || lead.notes || 'Llamada de Diagnóstico Estratégico',
       dateTime: new Date(),
       status: 'Activa',
       channel: lead.channel || 'WhatsApp',

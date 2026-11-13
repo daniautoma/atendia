@@ -99,12 +99,12 @@ export async function POST(req: Request) {
     ]);
 
     const systemPrompt = buildSystemPrompt({
-      assistantName: assistant?.name || 'DentalIA',
-      businessName: business?.name || 'Clínica Dental San Salvador',
-      activity: business?.activity || 'Odontología integral y diseño de sonrisa',
-      address: business?.address || 'Paseo General Escalón #3700, San Salvador',
-      phone: business?.phone || '+503 2200 1234',
-      website: business?.website || 'https://dentalsansalvador.sv',
+      assistantName: assistant?.name || 'Asistente danIAutoma',
+      businessName: business?.name || 'danIAutoma',
+      activity: business?.activity || 'Agencia de Automatización con IA, Agentes de WhatsApp y Desarrollo Web',
+      address: business?.address || 'San Salvador, El Salvador',
+      phone: business?.phone || '+503 7000 0000',
+      website: business?.website || 'https://daniautoma.com',
       timezone: business?.timezone || 'America/El_Salvador',
       tone: assistant?.tone || 'cercano',
       welcomeMessage: assistant?.welcomeMessage || '',

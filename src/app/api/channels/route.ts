@@ -28,9 +28,9 @@ export async function GET() {
       },
       web: {
         enabled: channelWeb?.webChatEnabled ?? true,
-        color: channelWeb?.webChatColor || '#0d9488',
-        title: channelWeb?.webChatTitle || 'Atención Clínica Dental San Salvador',
-        welcome: channelWeb?.webChatWelcome || '¡Hola! ¿En qué podemos ayudarte?',
+        color: channelWeb?.webChatColor || '#6366f1',
+        title: channelWeb?.webChatTitle || 'Asistente danIAutoma',
+        welcome: channelWeb?.webChatWelcome || '¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?',
       },
       appUrl: process.env.APP_URL || 'http://localhost:3000',
     });

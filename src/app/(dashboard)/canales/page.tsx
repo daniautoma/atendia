@@ -47,9 +47,9 @@ export default function CanalesPage() {
 
   // Estados del Chat Web
   const [webEnabled, setWebEnabled] = useState(true);
-  const [webColor, setWebColor] = useState('#0d9488');
-  const [webTitle, setWebTitle] = useState('Atención Clínica Dental San Salvador');
-  const [webWelcome, setWebWelcome] = useState('¡Hola! ¿Tienes alguna pregunta o deseas pedir cita?');
+  const [webColor, setWebColor] = useState('#6366f1');
+  const [webTitle, setWebTitle] = useState('Asistente danIAutoma');
+  const [webWelcome, setWebWelcome] = useState('¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?');
   const [appUrl, setAppUrl] = useState('http://localhost:3000');
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
@@ -62,7 +62,7 @@ export default function CanalesPage() {
         setProvider(data.whatsapp.provider || 'BAILEYS');
         setWaStatus(data.whatsapp.status || 'DISCONNECTED');
         setWaPhone(data.whatsapp.phoneNumber || '');
-        setWaBusinessName(data.whatsapp.businessName || '');
+        setWaBusinessName(data.whatsapp.businessName || 'danIAutoma');
         if (data.whatsapp.qrCode) {
           setQrCodeData(data.whatsapp.qrCode);
         } else if (data.whatsapp.status === 'CONNECTED') {
@@ -74,9 +74,9 @@ export default function CanalesPage() {
       }
       if (data.web) {
         setWebEnabled(data.web.enabled ?? true);
-        setWebColor(data.web.color || '#0d9488');
-        setWebTitle(data.web.title || 'Atención Clínica Dental San Salvador');
-        setWebWelcome(data.web.welcome || '');
+        setWebColor(data.web.color || '#6366f1');
+        setWebTitle(data.web.title || 'Asistente danIAutoma');
+        setWebWelcome(data.web.welcome || '¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?');
       }
       if (data.appUrl) setAppUrl(data.appUrl);
     } catch {
@@ -257,7 +257,7 @@ export default function CanalesPage() {
                   />
                 </div>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-                  Conexión directa escaneando el código QR desde la app de WhatsApp del móvil de la clínica. Sesión persistida en disco.
+                  Conexión directa escaneando el código QR desde la app de WhatsApp Business del negocio. Sesión persistida en disco.
                 </p>
               </div>
 
@@ -605,7 +605,7 @@ export default function CanalesPage() {
               <div className="w-full max-w-[320px] mx-auto bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden text-xs">
                 <div style={{ backgroundColor: webColor }} className="p-3 text-white flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs">
-                    L
+                    d
                   </div>
                   <div>
                     <p className="font-bold text-xs">{webTitle}</p>

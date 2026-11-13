@@ -34,7 +34,7 @@ export default function ProbarPage() {
     {
       id: 'welcome',
       sender: 'ASSISTANT',
-      text: '¡Hola! Bienvenido a Clínica Dental San Salvador. Soy DentalIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
+      text: '¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?',
       timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
     },
   ]);
@@ -118,18 +118,18 @@ export default function ProbarPage() {
       {
         id: 'welcome_' + Date.now(),
         sender: 'ASSISTANT',
-        text: '¡Hola! Bienvenido a Clínica Dental San Salvador. Soy DentalIA, tu asistente virtual. ¿En qué podemos ayudarte hoy?',
+        text: '¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?',
         timestamp: new Date().toLocaleTimeString('es-SV', { timeZone: 'America/El_Salvador' }),
       },
     ]);
     setTimeline([]);
   };
 
-  // Botones de prueba rápida
+  // Botones de prueba rápida para danIAutoma
   const quickPrompts = [
-    { label: 'Tarifas Limpieza', text: '¿Qué precio tiene la limpieza dental profunda y cuánto dura la sesión?' },
-    { label: 'Urgencia por Dolor', text: 'Tengo un dolor muy fuerte y punzante en una muela desde anoche, ¿podéis atenderme hoy de urgencia?' },
-    { label: 'Pedir Cita Martes', text: 'Quiero agendar cita para revisión diagnóstica el próximo martes a las 11:30' },
+    { label: 'Servicios y Precios', text: 'Hola, ¿qué servicios de automatización e IA ofrecen y cuáles son sus precios?' },
+    { label: '¿Funciona con mi WhatsApp?', text: '¿Puedo conectar el agente a mi número actual de WhatsApp Business?' },
+    { label: 'Agendar Diagnóstico', text: 'Me gustaría agendar una llamada de diagnóstico gratuito para mi negocio' },
     { label: 'Test YCloud Oficial', text: 'Ejecutar test de arquitectura modular YCloud: verificar endpoint y firma de webhook' },
   ];
 
@@ -137,7 +137,7 @@ export default function ProbarPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Probar Asistente"
-        subtitle="Simula una conversación en tiempo real con DentalIA inspeccionando tools y contexto"
+        subtitle="Simula una conversación en tiempo real con el Asistente danIAutoma inspeccionando tools y contexto"
         actions={
           <div className="flex items-center gap-2">
             {/* Conmutador Modo Seguro */}
@@ -172,11 +172,11 @@ export default function ProbarPage() {
           {/* Barra superior del chat simulador */}
           <div className="px-5 py-3.5 bg-stone-50/80 border-b border-stone-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 <Bot className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-bold text-stone-900 leading-tight">DentalIA (Simulación)</p>
+                <p className="text-xs font-bold text-stone-900 leading-tight">Asistente danIAutoma (Simulación)</p>
                 <div className="flex items-center gap-1.5 text-[10px] text-stone-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   <span>En línea • America/El_Salvador</span>
@@ -247,11 +247,11 @@ export default function ProbarPage() {
             {loading && (
               <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-stone-200 w-fit text-xs text-stone-500">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" />
-                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce delay-100" />
-                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce delay-200" />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce delay-100" />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce delay-200" />
                 </div>
-                <span>DentalIA está escribiendo...</span>
+                <span>Asistente danIAutoma está escribiendo...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -287,7 +287,7 @@ export default function ProbarPage() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Escribe como un paciente (ej: '¿Cuánto cuesta un empaste?' o 'Necesito cita urgente')..."
+                placeholder="Escribe tu consulta o prueba (ej: '¿Qué servicios ofrecen?' o 'Quiero agendar un diagnóstico')..."
                 className="flex-1 px-4 py-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               />
               <button

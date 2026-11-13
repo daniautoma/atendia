@@ -32,11 +32,11 @@ export default function ConocimientoPage() {
 
   // Perfil del negocio
   const [business, setBusiness] = useState({
-    name: 'Clínica Dental San Salvador',
-    activity: 'Odontología integral y diseño de sonrisa',
-    address: 'Paseo General Escalón #3700, Colonia Escalón, San Salvador',
-    phone: '+503 2200 1234',
-    website: 'https://dentalsansalvador.sv',
+    name: 'danIAutoma',
+    activity: 'Agencia especializada en Agentes de IA para WhatsApp y Web, automatización de procesos con n8n, CRMs de agendamiento y páginas web de alta conversión en El Salvador.',
+    address: 'San Salvador, El Salvador',
+    phone: '+503 7000 0000',
+    website: 'https://daniautoma.com',
   });
 
   // Servicios
@@ -286,9 +286,9 @@ export default function ConocimientoPage() {
                 <Lock className="w-4 h-4" />
               </div>
               <div>
-                <p className="font-bold text-amber-950">Modo Solo Lectura (Rol Agente)</p>
+                <p className="text-bold text-amber-950">Modo Solo Lectura (Rol Agente)</p>
                 <p className="text-[11px] text-amber-800 mt-0.5">
-                  Puedes consultar el catálogo de servicios, tarifas oficiales y preguntas frecuentes para informar a los pacientes. La creación, edición y borrado de información está reservada a Administradores.
+                  Puedes consultar el catálogo de servicios, tarifas oficiales y preguntas frecuentes para informar a los clientes y prospectos. La creación, edición y borrado de información está reservada a Administradores.
                 </p>
               </div>
             </div>
@@ -502,7 +502,7 @@ export default function ConocimientoPage() {
                 <h3 className="text-sm font-bold text-stone-900">
                   Preguntas Frecuentes ({faqs.length})
                 </h3>
-                <p className="text-xs text-stone-500">Respuestas oficiales a dudas recurrentes de pacientes</p>
+                <p className="text-xs text-stone-500">Respuestas oficiales a dudas recurrentes de clientes</p>
               </div>
             </div>
             {userRole !== 'AGENT' && (
@@ -561,7 +561,7 @@ export default function ConocimientoPage() {
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
         title={editingService?.id ? 'Editar Servicio' : 'Nuevo Servicio'}
-        description="Define el nombre, descripción clínica, duración y condiciones de precio"
+        description="Define el nombre, descripción del servicio, duración y condiciones de precio"
       >
         {editingService && (
           <form onSubmit={handleSaveService} className="space-y-4">
@@ -573,7 +573,7 @@ export default function ConocimientoPage() {
                 value={editingService.name}
                 onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm"
-                placeholder="ej: Higiene Dental y Pulido"
+                placeholder="ej: Agente de IA Omnicanal"
               />
             </div>
 
@@ -646,7 +646,7 @@ export default function ConocimientoPage() {
                   }
                   className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4"
                 />
-                <span className="text-xs text-stone-700 font-medium">Requiere valoración clínica previa</span>
+                <span className="text-xs text-stone-700 font-medium">Requiere diagnóstico o cotización previa</span>
               </label>
             </div>
 
@@ -738,7 +738,7 @@ export default function ConocimientoPage() {
               type="url"
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
-              placeholder="https://dentalsansalvador.sv"
+              placeholder="https://daniautoma.com"
               className="flex-1 px-3.5 py-2 rounded-lg border border-stone-300 text-sm"
             />
             <button

@@ -47,8 +47,8 @@ export async function POST(req: Request) {
       }
 
       const res = await createGoogleCalendarEvent({
-        summary: `Cita: ${appt.contact.name || 'Paciente'} - ${appt.serviceName}`,
-        description: `Cita en Clínica Dental San Salvador.\nPaciente: ${appt.contact.name || 'Paciente'}\nTeléfono: ${appt.contact.phone || 'No indicado'}\nTratamiento: ${appt.serviceName}`,
+        summary: `Cita: ${appt.contact.name || 'Cliente'} - ${appt.serviceName}`,
+        description: `Cita / Sesión en danIAutoma.\nCliente: ${appt.contact.name || 'Cliente'}\nTeléfono: ${appt.contact.phone || 'No indicado'}\nServicio: ${appt.serviceName}`,
         startTime: appt.startTime.toISOString(),
         endTime: appt.endTime.toISOString(),
         attendeeEmail: appt.contact.email || undefined,
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       if (calIntegration?.enabled) {
         const calRes = await createGoogleCalendarEvent({
           summary: `Cita: ${patientName} - ${serviceName}`,
-          description: `Cita agendada en Clínica Dental San Salvador.\nPaciente: ${patientName}\nTeléfono: ${phone || '—'}\nTratamiento: ${serviceName}${notes ? '\nNotas: ' + notes : ''}`,
+          description: `Cita / Sesión agendada en danIAutoma.\nCliente: ${patientName}\nTeléfono: ${phone || '—'}\nServicio: ${serviceName}${notes ? '\nNotas: ' + notes : ''}`,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           attendeeEmail: email || undefined,
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
       console.warn('[Appointments API] Error al registrar cita en Google Sheets:', err?.message);
     });
 
-    // 6. Integración Gmail: Disparar correo de confirmación al paciente si hay email
+    // 6. Integración Gmail: Disparar correo de confirmación al cliente si hay email
     if (email && email.trim()) {
       (async () => {
         try {
@@ -183,31 +183,30 @@ export async function POST(req: Request) {
             const htmlBody = `
               <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
                 <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                  <div style="background-color: #0d9488; padding: 24px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Clínica Dental San Salvador</h1>
-                    <p style="color: #ccfbf1; margin: 6px 0 0; font-size: 13px;">Confirmación de Cita Odontológica</p>
+                  <div style="background-color: #6366f1; padding: 24px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">danIAutoma</h1>
+                    <p style="color: #e0e7ff; margin: 6px 0 0; font-size: 13px;">Confirmación de Cita / Sesión Estratégica</p>
                   </div>
                   <div style="padding: 24px;">
                     <p style="font-size: 15px; margin: 0 0 16px;">¡Hola, <strong>${patientName}</strong>!</p>
                     <p style="font-size: 14px; line-height: 1.5; color: #475569; margin: 0 0 20px;">
-                      Tu cita ha sido agendada con éxito en nuestra clínica en San Salvador:
+                      Tu cita ha sido agendada con éxito con el equipo de danIAutoma en San Salvador:
                     </p>
-                    <div style="background-color: #f0fdfa; border-left: 4px solid #0d9488; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
-                      <p style="margin: 0 0 6px; font-size: 14px;"><strong>Tratamiento:</strong> ${serviceName}</p>
+                    <div style="background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
+                      <p style="margin: 0 0 6px; font-size: 14px;"><strong>Servicio:</strong> ${serviceName}</p>
                       <p style="margin: 0 0 6px; font-size: 14px;"><strong>Fecha:</strong> ${formattedDate}</p>
                       <p style="margin: 0 0 6px; font-size: 14px;"><strong>Hora (El Salvador):</strong> ${formattedTime}</p>
-                      <p style="margin: 0; font-size: 14px;"><strong>Ubicación:</strong> Paseo General Escalón #3700, San Salvador</p>
+                      <p style="margin: 0; font-size: 14px;"><strong>Modalidad / Ubicación:</strong> Virtual (Google Meet) o San Salvador, El Salvador</p>
                     </div>
-                    <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0 0 8px;">Recomendaciones para tu visita:</h4>
+                    <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0 0 8px;">Recomendaciones para tu sesión:</h4>
                     <ul style="font-size: 13px; color: #475569; line-height: 1.6; margin: 0 0 20px; padding-left: 18px;">
-                      <li>Presentarse 10 minutos antes de la hora indicada.</li>
-                      <li>Estacionamiento privado y seguro para pacientes.</li>
-                      <li>Presentar tu DUI o documento de identificación en recepción.</li>
-                      <li>En caso de necesitar cancelar o reprogramar, avísanos con al menos 4 horas de anticipación.</li>
+                      <li>Conectarte puntualmente a la hora indicada.</li>
+                      <li>Tener a mano los procesos o herramientas de tu negocio que deseas automatizar.</li>
+                      <li>En caso de necesitar reprogramar o cancelar, avísanos con al menos 4 horas de anticipación.</li>
                     </ul>
                     <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; color: #64748b; font-size: 12px;">
-                      <p style="margin: 0 0 4px;"><strong>Clínica Dental San Salvador</strong></p>
-                      <p style="margin: 0;">Teléfono / WhatsApp: +503 2200 1234 | San Salvador, El Salvador</p>
+                      <p style="margin: 0 0 4px;"><strong>danIAutoma</strong></p>
+                      <p style="margin: 0;">Agencia de Automatización con IA y Desarrollo Web | San Salvador, El Salvador</p>
                     </div>
                   </div>
                 </div>
@@ -216,7 +215,7 @@ export async function POST(req: Request) {
 
             await sendGmailEmail({
               to: email.trim(),
-              subject: `Confirmación de Cita Odontológica - ${patientName} (${serviceName})`,
+              subject: `Confirmación de Cita / Sesión - ${patientName} (${serviceName})`,
               htmlBody,
             });
           }
@@ -266,8 +265,8 @@ export async function PUT(req: Request) {
             const endStr = endTime ? new Date(endTime).toISOString() : appt.endTime.toISOString();
 
             await updateGoogleCalendarEvent(appt.googleCalendarEventId, {
-              summary: `Cita: ${appt.contact.name || 'Paciente'} - ${serviceName || appt.serviceName}`,
-              description: `Cita en Clínica Dental San Salvador.\nPaciente: ${appt.contact.name || 'Paciente'}\nTeléfono: ${appt.contact.phone || '—'}\nTratamiento: ${serviceName || appt.serviceName}${notes !== undefined ? '\nNotas: ' + notes : ''}`,
+              summary: `Cita: ${appt.contact.name || 'Cliente'} - ${serviceName || appt.serviceName}`,
+              description: `Cita / Sesión en danIAutoma.\nCliente: ${appt.contact.name || 'Cliente'}\nTeléfono: ${appt.contact.phone || '—'}\nServicio: ${serviceName || appt.serviceName}${notes !== undefined ? '\nNotas: ' + notes : ''}`,
               startTime: startStr,
               endTime: endStr,
               attendeeEmail: appt.contact.email || undefined,

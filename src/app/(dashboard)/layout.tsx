@@ -21,9 +21,9 @@ export default async function DashboardLayout({
     <MobileNavProvider>
       <div className="flex h-screen w-screen overflow-hidden bg-stone-50">
         <Sidebar
-          businessName={business?.name || 'Clínica Dental San Salvador'}
+          businessName={business?.name || 'danIAutoma'}
           assistantActive={business?.assistantActive ?? true}
-          agencyName={business?.agencyName || 'Agencia Atendia'}
+          agencyName={business?.agencyName || 'danIAutoma'}
           userRole={session?.role || 'AGENT'}
           userName={session?.name || 'Usuario'}
         />

@@ -38,13 +38,13 @@ export const ASSISTANT_TOOLS = [
     type: 'function',
     function: {
       name: 'agendar_cita',
-      description: 'Agenda y reserva una cita en la clínica. IMPORTANTE: Requiere confirmación expresa del día, la hora, nombre completo y teléfono válido (+503). La clínica está cerrada los domingos.',
+      description: 'Agenda y reserva una cita en danIAutoma. IMPORTANTE: Requiere confirmación expresa del día, la hora, nombre completo y teléfono válido (+503). La agencia está cerrada los domingos.',
       parameters: {
         type: 'object',
         properties: {
-          nombre_cliente: { type: 'string', description: 'Nombre completo del paciente' },
+          nombre_cliente: { type: 'string', description: 'Nombre completo del cliente' },
           telefono: { type: 'string', description: 'Teléfono de contacto de El Salvador (+503... o número de 8 dígitos ej: 70123444)' },
-          email: { type: 'string', description: 'Correo electrónico del paciente para confirmación (opcional)' },
+          email: { type: 'string', description: 'Correo electrónico del cliente para confirmación (opcional)' },
           servicio: { type: 'string', description: 'Nombre del servicio solicitado' },
           fecha_hora: { type: 'string', description: 'Fecha y hora en formato ISO o YYYY-MM-DDTHH:mm' },
           confirmado_por_cliente: { type: 'boolean', description: 'Debe ser true tras confirmación expresa del cliente' },
@@ -57,13 +57,13 @@ export const ASSISTANT_TOOLS = [
     type: 'function',
     function: {
       name: 'registrar_lead',
-      description: 'Registra o actualiza en la pestaña "Leads" del CRM de Google Sheets los datos de un paciente potencial cuando este solicita información de tarifas, tratamientos o resuelve dudas pero decide no agendar en este momento.',
+      description: 'Registra o actualiza en la pestaña "Leads" del CRM de Google Sheets los datos de un prospecto o cliente potencial cuando este solicita información de servicios, cotizaciones o resuelve dudas pero decide no agendar en este momento.',
       parameters: {
         type: 'object',
         properties: {
-          nombre: { type: 'string', description: 'Nombre del paciente o contacto' },
+          nombre: { type: 'string', description: 'Nombre del prospecto o contacto' },
           telefono: { type: 'string', description: 'Teléfono de contacto de El Salvador (+503... o número de 8 dígitos ej: 70123444). Opcional si el cliente aún no lo ha brindado.' },
-          servicio_interes: { type: 'string', description: 'Tratamiento por el que preguntó o mostró interés (ej: "Limpieza Dental", "Blanqueamiento LED", "Ortodoncia Invisible" o "No especificado")' },
+          servicio_interes: { type: 'string', description: 'Servicio por el que preguntó o mostró interés (ej: "Llamada de Diagnóstico Estratégico", "Agente de IA Omnicanal", "Automatización de Flujos con n8n", "Landing Page de Alta Conversión" o "No especificado")' },
           estado_lead: {
             type: 'string',
             enum: ['Potencial', 'Solo Información'],
@@ -211,16 +211,16 @@ export async function executeToolCall(
               fecha,
               diaSemana: 'domingo',
               cerrado: true,
-              motivo: 'La clínica dental permanece cerrada los domingos (no es festivo, es el descanso dominical regular).',
+              motivo: 'danIAutoma permanece cerrada los domingos (descanso dominical regular).',
               huecosDisponibles: [],
               siguienteDiaHabil: {
                 fecha: nextMondayIso,
                 diaSemana: 'lunes',
                 horario: '08:00 a 18:00',
               },
-              mensaje: `El día ${fecha} es domingo y la clínica está cerrada. El siguiente día hábil disponible es el lunes ${nextMondayIso} a partir de las 08:30.`,
+              mensaje: `El día ${fecha} es domingo y la agencia está cerrada. El siguiente día hábil disponible es el lunes ${nextMondayIso} a partir de las 08:30.`,
             },
-            summary: `Cerrado: El día ${fecha} es domingo. La clínica está cerrada; ofrecer el lunes ${nextMondayIso}.`,
+            summary: `Cerrado: El día ${fecha} es domingo. La agencia está cerrada; ofrecer el lunes ${nextMondayIso}.`,
           };
         }
 
@@ -306,7 +306,7 @@ export async function executeToolCall(
         const patientName = args.nombre || contact?.name || 'Prospecto';
         const serviceInterest = args.servicio_interes || 'No especificado';
         const leadStatus = args.estado_lead || 'Solo Información';
-        const summary = args.resumen_conversacion || 'Paciente consultó información pero no agendó en este momento';
+        const summary = args.resumen_conversacion || 'Cliente consultó información pero no agendó en este momento';
 
         if (contact) {
           await prisma.contact.update({
@@ -347,7 +347,7 @@ export async function executeToolCall(
         if (!args.confirmado_por_cliente) {
           return {
             result: { error: 'El cliente debe confirmar explícitamente el día y la hora antes de fijar la cita.' },
-            summary: 'Bloqueado: Se solicitó confirmación al paciente antes de agendar.',
+            summary: 'Bloqueado: Se solicitó confirmación al cliente antes de agendar.',
           };
         }
 
@@ -357,7 +357,7 @@ export async function executeToolCall(
           return {
             result: {
               error: 'HORARIO_INVALIDO',
-              mensaje: 'No se especificó la fecha y hora de la cita. Solicita la fecha y hora al paciente.',
+              mensaje: 'No se especificó la fecha y hora de la cita. Solicita la fecha y hora al cliente.',
             },
             summary: 'Rechazado: Fecha y hora no indicadas.',
           };
@@ -439,7 +439,7 @@ export async function executeToolCall(
           return {
             result: {
               error: 'TELEFONO_INVALIDO',
-              mensaje: `El número de teléfono "${candidatePhone || 'no proporcionado'}" no es válido. En El Salvador debe ser un número de 8 dígitos con prefijo +503 (ejemplo: +503 7012 3444 o 70123444). Por favor pídele amablemente al paciente que te proporcione su número de teléfono correcto para poder confirmar y agendar la cita.`,
+              mensaje: `El número de teléfono "${candidatePhone || 'no proporcionado'}" no es válido. En El Salvador debe ser un número de 8 dígitos con prefijo +503 (ejemplo: +503 7012 3444 o 70123444). Por favor pídele amablemente al cliente que te proporcione su número de teléfono correcto para poder confirmar y agendar la cita.`,
             },
             summary: `Rechazado: Teléfono inválido (${candidatePhone || 'vacío'}). Se requiere formato válido de El Salvador (+503 de 8 dígitos).`,
           };
@@ -511,7 +511,7 @@ export async function executeToolCall(
           if (calIntegration?.enabled) {
             const calEvent = await createGoogleCalendarEvent({
               summary: `Cita: ${args.nombre_cliente} - ${args.servicio}`,
-              description: `Cita agendada automáticamente por DentalIA.\nPaciente: ${args.nombre_cliente}\nTeléfono: ${validPhone}\nTratamiento: ${args.servicio}`,
+              description: `Cita / Sesión agendada automáticamente por el Asistente danIAutoma.\nCliente: ${args.nombre_cliente}\nTeléfono: ${validPhone}\nServicio: ${args.servicio}`,
               startTime: startTime.toISOString(),
               endTime: endTime.toISOString(),
               attendeeEmail: args.email || contact?.email || undefined,
@@ -570,31 +570,30 @@ export async function executeToolCall(
                 const htmlBody = `
                   <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
                     <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                      <div style="background-color: #0d9488; padding: 24px; text-align: center;">
-                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">Clínica Dental San Salvador</h1>
-                        <p style="color: #ccfbf1; margin: 6px 0 0; font-size: 13px;">Confirmación de Cita Odontológica</p>
+                      <div style="background-color: #6366f1; padding: 24px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700;">danIAutoma</h1>
+                        <p style="color: #e0e7ff; margin: 6px 0 0; font-size: 13px;">Confirmación de Cita / Sesión Estratégica</p>
                       </div>
                       <div style="padding: 24px;">
                         <p style="font-size: 15px; margin: 0 0 16px;">¡Hola, <strong>${args.nombre_cliente}</strong>!</p>
                         <p style="font-size: 14px; line-height: 1.5; color: #475569; margin: 0 0 20px;">
-                          Te confirmamos que tu cita ha sido reservada con éxito en nuestra clínica en San Salvador:
+                          Te confirmamos que tu cita ha sido reservada con éxito con danIAutoma en San Salvador:
                         </p>
-                        <div style="background-color: #f0fdfa; border-left: 4px solid #0d9488; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
-                          <p style="margin: 0 0 6px; font-size: 14px;"><strong>Tratamiento:</strong> ${args.servicio}</p>
+                        <div style="background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
+                          <p style="margin: 0 0 6px; font-size: 14px;"><strong>Servicio:</strong> ${args.servicio}</p>
                           <p style="margin: 0 0 6px; font-size: 14px;"><strong>Fecha:</strong> ${formattedDate}</p>
                           <p style="margin: 0 0 6px; font-size: 14px;"><strong>Hora (El Salvador):</strong> ${formattedTime}</p>
-                          <p style="margin: 0; font-size: 14px;"><strong>Ubicación:</strong> Paseo General Escalón #3700, San Salvador</p>
+                          <p style="margin: 0; font-size: 14px;"><strong>Modalidad / Ubicación:</strong> Virtual (Google Meet) o San Salvador, El Salvador</p>
                         </div>
-                        <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0 0 8px;">Recomendaciones para tu visita:</h4>
+                        <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0 0 8px;">Recomendaciones para tu sesión:</h4>
                         <ul style="font-size: 13px; color: #475569; line-height: 1.6; margin: 0 0 20px; padding-left: 18px;">
-                          <li>Llegar con 10 minutos de anticipación.</li>
-                          <li>Estacionamiento privado y seguro disponible en nuestras instalaciones.</li>
-                          <li>Presentar tu documento de identidad (DUI o pasaporte) en recepción.</li>
+                          <li>Conectarte puntualmente a la hora indicada.</li>
+                          <li>Tener claros los procesos de tu negocio que buscas automatizar o escalar.</li>
                           <li>Para reprogramar o cancelar, por favor avísanos con al menos 4 horas de anticipación.</li>
                         </ul>
                         <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; color: #64748b; font-size: 12px;">
-                          <p style="margin: 0 0 4px;"><strong>Clínica Dental San Salvador</strong></p>
-                          <p style="margin: 0;">Teléfono / WhatsApp: +503 2200 1234 | San Salvador, El Salvador</p>
+                          <p style="margin: 0 0 4px;"><strong>danIAutoma</strong></p>
+                          <p style="margin: 0;">Agencia de Automatización con IA y Desarrollo Web | San Salvador, El Salvador</p>
                         </div>
                       </div>
                     </div>
@@ -603,7 +602,7 @@ export async function executeToolCall(
 
                 await sendGmailEmail({
                   to: patientEmail,
-                  subject: `Confirmación de Cita Odontológica - ${args.nombre_cliente} (${args.servicio})`,
+                  subject: `Confirmación de Cita / Sesión - ${args.nombre_cliente} (${args.servicio})`,
                   htmlBody,
                 });
               }
@@ -614,15 +613,15 @@ export async function executeToolCall(
         }
 
         sendSlackNotification('Nueva Cita Agendada', {
-          'Paciente': args.nombre_cliente,
-          'Tratamiento': args.servicio,
+          'Cliente': args.nombre_cliente,
+          'Servicio': args.servicio,
           'Fecha y Hora': args.fecha_hora,
           'Teléfono': args.telefono || 'No indicado',
         }).catch(() => {});
 
         dispatchOutgoingWebhook('appointment.booked', {
           appointmentId: createdAppointment?.id,
-          patientName: args.nombre_cliente,
+          clientName: args.nombre_cliente,
           service: args.servicio,
           startTime: args.fecha_hora,
           googleCalendarEventId: gcalEventId,
@@ -632,14 +631,14 @@ export async function executeToolCall(
           result: {
             citaId: createdAppointment?.id || 'cita_' + Date.now(),
             status: 'CONFIRMED',
-            paciente: args.nombre_cliente,
+            cliente: args.nombre_cliente,
             telefono: validPhone,
             servicio: args.servicio,
             fechaHora: args.fecha_hora,
             diaSemanaConfirmado: nombreDiaCita,
             fechaLegibleConfirmada: fechaLegible,
             googleCalendarEventId: gcalEventId,
-            INSTRUCCION_OBLIGATORIA_RESPUESTA: `Cita agendada con éxito para el día ${nombreDiaCita.toUpperCase()} (${fechaLegible}). Es estrictamente obligatorio que en tu confirmación al paciente uses exactamente la frase "${fechaLegible}". NUNCA digas un día de la semana diferente (si es lunes, di lunes; no digas martes).`,
+            INSTRUCCION_OBLIGATORIA_RESPUESTA: `Cita agendada con éxito para el día ${nombreDiaCita.toUpperCase()} (${fechaLegible}). Es estrictamente obligatorio que en tu confirmación al cliente uses exactamente la frase "${fechaLegible}". NUNCA digas un día de la semana diferente (si es lunes, di lunes; no digas martes).`,
           },
           summary: `Cita confirmada para ${args.nombre_cliente} (${args.servicio}) el ${fechaLegible}${gcalEventId ? ' (Sincronizada con Google Calendar)' : ''}.`,
         };
@@ -721,7 +720,7 @@ export async function executeToolCall(
       }
 
       case 'pasar_a_humano': {
-        let contactName = 'Paciente';
+        let contactName = 'Cliente';
         let channelName = 'WhatsApp / Web';
 
         if (ctx.conversationId) {
@@ -735,7 +734,7 @@ export async function executeToolCall(
           }).catch(() => null);
 
           if (conv) {
-            contactName = conv.contact?.name || conv.contact?.phone || 'Paciente';
+            contactName = conv.contact?.name || conv.contact?.phone || 'Cliente';
             channelName = conv.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web';
           }
         } else if (ctx.contactId) {
@@ -743,7 +742,7 @@ export async function executeToolCall(
             where: { id: ctx.contactId },
           }).catch(() => null);
           if (contact) {
-            contactName = contact.name || contact.phone || 'Paciente';
+            contactName = contact.name || contact.phone || 'Cliente';
           }
         }
 
@@ -759,7 +758,7 @@ export async function executeToolCall(
         const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
         const telegramMessage = [
           '🚨 *Atención Requerida*',
-          `El paciente *${contactName}* necesita asistencia humana.`,
+          `El cliente *${contactName}* necesita asistencia humana.`,
           `*Motivo:* ${args.motivo || 'No especificado'}`,
           `*Urgencia:* ${args.urgencia || 'normal'}`,
           `*Canal:* ${channelName}`,

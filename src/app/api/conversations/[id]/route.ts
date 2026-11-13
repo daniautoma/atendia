@@ -71,14 +71,14 @@ export async function POST(
         },
       });
 
-      const contactName = conversation.contact?.name || conversation.contact?.phone || 'Paciente';
+      const contactName = conversation.contact?.name || conversation.contact?.phone || 'Cliente';
       const channelName = conversation.channel === 'WHATSAPP' ? 'WhatsApp' : 'Web';
       const baseUrl = process.env.APP_URL || 'http://localhost:3000';
       const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
 
       const telegramMessage = [
         '🚨 *Atención Requerida (Intervención Manual)*',
-        `El operador *${session.name}* ha tomado el control del paciente *${contactName}*.`,
+        `El operador *${session.name}* ha tomado el control del cliente *${contactName}*.`,
         `*Motivo:* Tomado manualmente desde el panel por ${session.name}`,
         `*Canal:* ${channelName}`,
         `[Abrir Panel](${panelUrl})`,

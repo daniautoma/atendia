@@ -182,12 +182,12 @@ async function handleInboundMessageJob(payload: {
   ]);
 
   const systemPrompt = buildSystemPrompt({
-    assistantName: assistant?.name || 'DentalIA',
-    businessName: business?.name || 'Clínica Dental San Salvador',
-    activity: business?.activity || 'Odontología integral y diseño de sonrisa',
-    address: business?.address || 'Paseo General Escalón #3700, San Salvador',
-    phone: business?.phone || '+503 2200 1234',
-    website: business?.website || 'https://dentalsansalvador.sv',
+    assistantName: assistant?.name || 'Asistente danIAutoma',
+    businessName: business?.name || 'danIAutoma',
+    activity: business?.activity || 'Agencia de Automatización con IA, Agentes de WhatsApp y Desarrollo Web',
+    address: business?.address || 'San Salvador, El Salvador',
+    phone: business?.phone || '+503 7000 0000',
+    website: business?.website || 'https://daniautoma.com',
     timezone: business?.timezone || 'America/El_Salvador',
     tone: assistant?.tone || 'cercano',
     welcomeMessage: assistant?.welcomeMessage || '',
@@ -210,7 +210,7 @@ async function handleInboundMessageJob(payload: {
     content: m.text,
   }));
 
-  // Garantizar que el mensaje recién recibido del paciente esté al final del historial
+  // Garantizar que el mensaje recién recibido del cliente esté al final del historial
   const lastHistoryMsg = formattedHistory[formattedHistory.length - 1];
   if (!lastHistoryMsg || lastHistoryMsg.role !== 'user' || lastHistoryMsg.content !== payload.text) {
     formattedHistory.push({ role: 'user', content: payload.text });
@@ -297,12 +297,12 @@ async function handleInboundMessageJob(payload: {
       },
     }).catch(() => {});
 
-    const contactName = conversation.contact?.name || conversation.contact?.phone || 'Paciente';
+    const contactName = conversation.contact?.name || conversation.contact?.phone || 'Cliente';
     const baseUrl = process.env.APP_URL || 'http://localhost:3000';
     const panelUrl = `${baseUrl.replace(/\/$/, '')}/conversaciones`;
     const telegramMessage = [
       '🚨 *Atención Requerida*',
-      `El paciente *${contactName}* necesita asistencia humana.`,
+      `El cliente *${contactName}* necesita asistencia humana.`,
       `*Motivo:* Derivado automáticamente a equipo humano (Intermitencia técnica de IA)`,
       `*Canal:* WhatsApp`,
       `[Abrir Panel](${panelUrl})`,
@@ -329,7 +329,7 @@ async function handleInboundMessageJob(payload: {
     waLid: conversation.contact?.waLid || undefined,
   });
 
-  console.log(`[Worker] Respuesta de DentalIA enviada a ${conversation.contact?.waLid || to} (${executedTools.length} tools usadas)`);
+  console.log(`[Worker] Respuesta del Asistente danIAutoma enviada a ${conversation.contact?.waLid || to} (${executedTools.length} tools usadas)`);
 }
 
 /**
@@ -362,7 +362,7 @@ async function checkUpcomingAppointments() {
           minute: '2-digit',
         });
 
-        const reminderText = `Hola ${appt.contact.name || ''}, te recordamos tu cita de mañana para ${appt.serviceName} a las ${dateStr} en Clínica Dental San Salvador (Paseo General Escalón #3700). Si necesitas reprogramarla o cancelarla, avísanos por este medio. ¡Te esperamos!`;
+        const reminderText = `Hola ${appt.contact.name || ''}, te recordamos tu cita de mañana para ${appt.serviceName} a las ${dateStr} con danIAutoma. Si necesitas reprogramarla o cancelarla, avísanos por este medio. ¡Te esperamos!`;
 
         await adapter.sendMessage({
           to: appt.contact.phone,
@@ -374,7 +374,7 @@ async function checkUpcomingAppointments() {
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: appt.contact.name || 'Paciente' },
+                  { type: 'text', text: appt.contact.name || 'Cliente' },
                   { type: 'text', text: appt.serviceName },
                   { type: 'text', text: dateStr },
                 ],
@@ -447,7 +447,7 @@ async function handleDailySummaryJob() {
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 12px;">
         <h2 style="color: #0f766e;">Resumen Diario de Atención — Atendia</h2>
-        <p>Aquí tienes el balance de actividad de hoy en <b>Clínica Dental San Salvador</b>:</p>
+        <p>Aquí tienes el balance de actividad de hoy en <b>danIAutoma</b>:</p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #eee;"><b>Conversaciones atendidas hoy:</b></td>

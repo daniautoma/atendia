@@ -10,9 +10,9 @@ interface WebChatWidgetProps {
 }
 
 export function WebChatWidget({
-  color = '#0d9488',
-  title = 'Atención Clínica Dental San Salvador',
-  welcomeMessage = '¡Hola! ¿Tienes alguna pregunta sobre nuestros tratamientos o deseas pedir cita?',
+  color = '#6366f1',
+  title = 'Asistente danIAutoma',
+  welcomeMessage = '¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?',
 }: WebChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Array<{ sender: 'CUSTOMER' | 'ASSISTANT'; text: string }>>([
@@ -94,12 +94,11 @@ export function WebChatWidget({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Si presiona Ctrl+Enter o Cmd+Enter, enviar mensaje como atajo rápido
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    // Si presiona Enter sin Shift, enviar mensaje directamente
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-    // Enter normal simplemente baja de renglón (comportamiento nativo de textarea)
   };
 
   return (
@@ -197,7 +196,7 @@ export function WebChatWidget({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Escribe tu mensaje... (Enter baja de renglón)"
+                placeholder="Escribe tu mensaje..."
                 rows={1}
                 className="flex-1 bg-transparent px-2 py-1.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none resize-none min-h-[36px] max-h-28 overflow-y-auto leading-relaxed"
               />
@@ -212,9 +211,8 @@ export function WebChatWidget({
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-stone-400">
-              <span>Enter baja de renglón • Envía con botón</span>
-              <span>Powered by <b>Atendia</b></span>
+            <div className="flex items-center justify-end mt-1 px-1 text-[10px] text-stone-400">
+              <span>Powered by <b>danIAutoma</b></span>
             </div>
           </div>
         </div>

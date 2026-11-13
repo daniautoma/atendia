@@ -244,15 +244,15 @@ export default function ResumenPage() {
 
           {(!data?.appointments || data.appointments.length === 0) ? (
             <div className="text-center py-8 text-stone-400 text-xs">
-              No hay citas agendadas todavía. Cuando un paciente reserve por WhatsApp, Web o desde el Calendario, aparecerá aquí.
+              No hay citas agendadas todavía. Cuando un cliente reserve por WhatsApp, Web o desde el Calendario, aparecerá aquí.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[600px]">
                 <thead>
                   <tr className="border-b border-stone-100 text-stone-400 font-medium">
-                    <th className="pb-2">Paciente</th>
-                    <th className="pb-2">Tratamiento</th>
+                    <th className="pb-2">Cliente</th>
+                    <th className="pb-2">Servicio</th>
                     <th className="pb-2">Fecha y Hora</th>
                     <th className="pb-2">Teléfono</th>
                     <th className="pb-2">Estado</th>
@@ -262,7 +262,7 @@ export default function ResumenPage() {
                 <tbody className="divide-y divide-stone-100">
                   {data.appointments.map((a: any) => (
                     <tr key={a.id} className="hover:bg-stone-50/60 transition-colors">
-                      <td className="py-3 font-bold text-stone-900">{a.contactName || 'Paciente'}</td>
+                      <td className="py-3 font-bold text-stone-900">{a.contactName || 'Cliente'}</td>
                       <td className="py-3 text-stone-700">{a.serviceName}</td>
                       <td className="py-3 text-stone-600 font-mono">
                         {new Date(a.startTime).toLocaleDateString('es-SV', {

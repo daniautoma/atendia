@@ -61,7 +61,7 @@ export class YCloudWhatsAppAdapter implements IWhatsAppAdapter {
           provider: WhatsAppProvider.YCLOUD,
           status: ConnectionStatus.CONNECTED,
           phoneNumber: firstNum?.phoneNumber || channel.waPhoneNumber || '+503 Oficial WABA',
-          businessName: firstNum?.verifiedName || channel.waBusinessName || 'Clínica Dental San Salvador',
+          businessName: firstNum?.verifiedName || channel.waBusinessName || 'danIAutoma',
           wabaId: firstNum?.wabaId || channel.ycloudWabaId,
         };
       }

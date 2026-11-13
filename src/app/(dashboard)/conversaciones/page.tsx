@@ -167,7 +167,7 @@ export default function ConversacionesPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Bandeja de Conversaciones"
-        subtitle="Atención omnicanal unificada: supervisa a DentalIA y toma el control humano cuando sea necesario"
+        subtitle="Atención omnicanal unificada: supervisa al Asistente danIAutoma y toma el control humano cuando sea necesario"
       />
 
       {/* Alerta Visual de Pase a Humano */}
@@ -287,7 +287,7 @@ export default function ConversacionesPage() {
                         </span>
                       ) : (
                         <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
-                          DentalIA activo
+                          danIAutoma activo
                         </span>
                       )}
                     </div>
@@ -321,7 +321,7 @@ export default function ConversacionesPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-stone-900 truncate">
-                      {activeConv.contact?.name || 'Paciente'}
+                      {activeConv.contact?.name || 'Cliente'}
                     </h4>
                     <p className="text-[11px] text-stone-500 truncate">
                       {activeConv.contact?.phone || activeConv.contact?.webSessionId} • {activeConv.channel}
@@ -355,7 +355,7 @@ export default function ConversacionesPage() {
                 <div className="px-6 py-2 bg-rose-50 border-b border-rose-200 text-rose-800 text-xs flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>
-                    <b>Atención humana requerida:</b> {activeConv.needsHumanReason || 'El paciente solicita hablar con una persona.'}
+                    <b>Atención humana requerida:</b> {activeConv.needsHumanReason || 'El cliente solicita hablar con una persona.'}
                   </span>
                 </div>
               )}
@@ -375,8 +375,8 @@ export default function ConversacionesPage() {
                       }`}
                     >
                       <div className="flex items-center gap-1.5 text-[10px] text-stone-400 mb-1 px-1">
-                        {isCustomer && <span className="font-semibold text-stone-600">Paciente</span>}
-                        {isAssistant && <span className="font-semibold text-teal-700 flex items-center gap-1"><Bot className="w-2.5 h-2.5" /> DentalIA</span>}
+                        {isCustomer && <span className="font-semibold text-stone-600">Cliente</span>}
+                        {isAssistant && <span className="font-semibold text-indigo-700 flex items-center gap-1"><Bot className="w-2.5 h-2.5" /> danIAutoma</span>}
                         {isAgent && (
                           <span className="font-semibold text-purple-700 flex items-center gap-1">
                             <User className="w-2.5 h-2.5" />

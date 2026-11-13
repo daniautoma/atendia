@@ -221,7 +221,7 @@ export default function IntegracionesPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Catálogo de Integraciones"
-        subtitle="Conecta los servicios de tu clínica para dotar a DentalIA de herramientas de acción reales"
+        subtitle="Conecta las herramientas de tu negocio para dotar al Asistente danIAutoma de capacidades de acción reales"
         actions={
           <button
             onClick={() => setIsGcpGuideOpen(true)}
@@ -620,7 +620,7 @@ export default function IntegracionesPage() {
             <li>
               <b>Crea un Proyecto en Google Cloud Console:</b>
               <p className="text-stone-500 mt-0.5">
-                Accede a <a href="https://console.cloud.google.com" target="_blank" className="text-teal-700 underline font-semibold">console.cloud.google.com</a> y crea un nuevo proyecto llamado <code>Atendia - Clínica Dental San Salvador</code>.
+                Accede a <a href="https://console.cloud.google.com" target="_blank" className="text-teal-700 underline font-semibold">console.cloud.google.com</a> y crea un nuevo proyecto llamado <code>Atendia - danIAutoma</code>.
               </p>
             </li>
 

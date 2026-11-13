@@ -26,10 +26,10 @@ export default function ComportamientoPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Estados del formulario
-  const [name, setName] = useState('DentalIA');
+  const [name, setName] = useState('Asistente danIAutoma');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [tone, setTone] = useState('cercano');
-  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [welcomeMessage, setWelcomeMessage] = useState('¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?');
   const [customInstructions, setCustomInstructions] = useState('');
   const [neverDoList, setNeverDoList] = useState('');
   const [outsideHoursBehavior, setOutsideHoursBehavior] = useState('APPOINTMENT_OR_MESSAGE');
@@ -67,7 +67,7 @@ export default function ComportamientoPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data) {
-          setName(data.name || 'DentalIA');
+          setName(data.name || 'Asistente danIAutoma');
           setAvatarUrl(data.avatarUrl || '');
           setTone(data.tone || 'cercano');
           setWelcomeMessage(data.welcomeMessage || '');
@@ -212,7 +212,7 @@ export default function ComportamientoPage() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-50">
       <Header
         title="Comportamiento del Asistente"
-        subtitle="Configura la personalidad, tono, horarios y reglas de derivación de DentalIA"
+        subtitle="Configura la personalidad, tono, horarios y reglas de derivación del Asistente danIAutoma"
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -264,7 +264,7 @@ export default function ComportamientoPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-stone-900">Identidad y Tono del Asistente</h3>
-              <p className="text-xs text-stone-500">Cómo se presenta y se comunica con los pacientes</p>
+              <p className="text-xs text-stone-500">Cómo se presenta y se comunica con los clientes</p>
             </div>
           </div>
 
@@ -276,7 +276,7 @@ export default function ComportamientoPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                placeholder="ej: DentalIA"
+                placeholder="ej: Asistente danIAutoma"
               />
             </div>
 
@@ -299,7 +299,7 @@ export default function ComportamientoPage() {
                 {
                   id: 'cercano',
                   title: 'Cercano',
-                  desc: 'Empático, cálido y amable. Trata al paciente con cordialidad y tuteo respetuoso.',
+                  desc: 'Empático, cálido y amable. Trata al cliente o prospecto con cordialidad y tuteo respetuoso.',
                 },
                 {
                   id: 'profesional',
@@ -370,7 +370,7 @@ export default function ComportamientoPage() {
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
               className="w-full px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Explica cómo debe comportarse ante situaciones particulares de la clínica..."
+              placeholder="Explica cómo debe comportarse ante situaciones particulares del negocio o servicios de la agencia..."
             />
           </div>
 
@@ -506,7 +506,7 @@ export default function ComportamientoPage() {
                   />
                 </div>
                 <p className="text-xs text-stone-500 mt-1">
-                  Avisa que la clínica está cerrada y pide el teléfono o recado para que el equipo llame a primera hora.
+                  Avisa que el equipo está fuera de horario y pide los datos o recado para contactar a primera hora.
                 </p>
               </div>
             </div>
@@ -535,7 +535,7 @@ export default function ComportamientoPage() {
               },
               {
                 key: 'onUrgency',
-                label: 'Urgencia médica, traumatismo o dolor severo',
+                label: 'Solicitud de proyecto complejo, presupuesto a medida o soporte técnico urgente',
               },
               {
                 key: 'onHumanRequest',
@@ -578,7 +578,7 @@ export default function ComportamientoPage() {
                 })
               }
               className="w-full px-3.5 py-2 rounded-lg border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              placeholder="Ej: Si el paciente pide presupuestos de más de $3,000 o financiamiento bancario complejo..."
+              placeholder="Ej: Si el cliente solicita integraciones a medida complejas o desarrollo de software personalizado..."
             />
           </div>
         </section>

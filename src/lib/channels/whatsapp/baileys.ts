@@ -75,7 +75,7 @@ export class BaileysWhatsAppAdapter implements IWhatsAppAdapter {
       provider: WhatsAppProvider.BAILEYS,
       status,
       phoneNumber: connectedPhone || channel?.waPhoneNumber,
-      businessName: channel?.waBusinessName || 'Clínica Dental San Salvador',
+      businessName: channel?.waBusinessName || 'danIAutoma',
       qrCode: currentQrDataUrl || channel?.baileysQrCode,
     };
   }

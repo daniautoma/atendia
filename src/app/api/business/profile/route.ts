@@ -9,11 +9,11 @@ export async function GET() {
     if (!business) {
       business = await prisma.businessProfile.create({
         data: {
-          name: 'Clínica Dental San Salvador',
-          activity: 'Odontología integral y diseño de sonrisa',
-          address: 'Paseo General Escalón #3700, Colonia Escalón, San Salvador',
-          phone: '+503 2200 1234',
-          website: 'https://dentalsansalvador.sv',
+          name: 'danIAutoma',
+          activity: 'Agencia de Automatización con IA, Agentes de WhatsApp y Desarrollo Web',
+          address: 'San Salvador, El Salvador',
+          phone: '+503 7000 0000',
+          website: 'https://daniautoma.com',
           timezone: 'America/El_Salvador',
         },
       });

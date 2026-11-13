@@ -62,14 +62,14 @@ model User {
 
 model BusinessProfile {
   id              String   @id @default(cuid())
-  name            String   @default("Clínica Dental San Salvador")
-  activity        String   @default("Odontología integral y diseño de sonrisa")
-  address         String   @default("Paseo General Escalón #3700, Colonia Escalón, San Salvador")
-  phone           String   @default("+503 2200 1234")
-  website         String   @default("https://dentalsansalvador.sv")
+  name            String   @default("danIAutoma")
+  activity        String   @default("Agencia de Automatización con IA, Agentes de WhatsApp y Desarrollo Web")
+  address         String   @default("San Salvador, El Salvador (Atención Digital y Consultoría Remota)")
+  phone           String   @default("+503 7000 0000")
+  website         String   @default("https://daniautoma.com")
   timezone        String   @default("America/El_Salvador")
   assistantActive Boolean  @default(true)
-  agencyName      String   @default("Agencia Atendia")
+  agencyName      String   @default("danIAutoma")
   agencyLogo      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -77,12 +77,12 @@ model BusinessProfile {
 
 model AssistantConfig {
   id                   String   @id @default(cuid())
-  name                 String   @default("DentalIA")
+  name                 String   @default("Asistente danIAutoma")
   avatarUrl            String?
   tone                 String   @default("cercano") // cercano, profesional, directo
-  welcomeMessage       String   @default("¡Hola! Bienvenido a Clínica Dental San Salvador. ¿En qué te podemos ayudar hoy?")
-  customInstructions   String   @default("Sé amable y empático. Si un paciente tiene dolor urgente, ofrécele una cita de urgencia para hoy mismo.")
-  neverDoList          String   @default("No dar diagnósticos médicos definitivos. No prometer precios sin valoración previa. No atender fuera de horario sin ofrecer cita.")
+  welcomeMessage       String   @default("¡Hola! 👋 Soy el asistente virtual de danIAutoma. ¿Te gustaría conocer cómo automatizar la atención y citas de tu negocio con IA o agendar una llamada de diagnóstico gratuito?")
+  customInstructions   String   @default("Sé cercano, consultivo, claro y orientado a ayudar a dueños de negocios locales (clínicas, talleres, academias, inmobiliarias, comercios) a no perder clientes por tardar en responder. Trata al cliente o prospecto con cordialidad y tuteo respetuoso. Tu objetivo principal es resolver dudas y agendar una Llamada de Diagnóstico Gratuito (30 min).")
+  neverDoList          String   @default("No inventar servicios o precios que no estén en el catálogo oficial. No garantizar resultados sin un diagnóstico previo. No confirmar citas fuera del horario disponible ni los domingos.")
   businessHours        Json     // Horario L-D
   outsideHoursBehavior String   @default("APPOINTMENT_OR_MESSAGE") // APPOINTMENT_OR_MESSAGE o ONLY_MESSAGE
   handoffRules         Json     // { onComplaint: true, onUrgency: true, onHumanRequest: true, onUnknownAnswer: true, customRule: "" }

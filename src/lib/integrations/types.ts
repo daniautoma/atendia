@@ -28,7 +28,7 @@ export const INTEGRATIONS_CATALOG: IntegrationDefinition[] = [
     capabilities: [
       { key: 'check_availability', label: 'Consultar disponibilidad', description: 'Permite leer huecos libres en el calendario', default: true },
       { key: 'create_events', label: 'Crear nuevas citas', description: 'Permite al asistente agendar citas confirmadas', default: true },
-      { key: 'modify_events', label: 'Mover o cancelar citas', description: 'Permite modificar citas existentes si el paciente lo pide', default: true },
+      { key: 'modify_events', label: 'Mover o cancelar citas', description: 'Permite modificar citas existentes si el cliente lo pide', default: true },
     ],
   },
   {
@@ -39,7 +39,7 @@ export const INTEGRATIONS_CATALOG: IntegrationDefinition[] = [
     authType: 'OAUTH2',
     scopes: ['https://www.googleapis.com/auth/gmail.send'],
     capabilities: [
-      { key: 'send_confirmation', label: 'Enviar confirmación de cita al paciente', description: 'Manda un email con detalles de la cita agendada', default: true },
+      { key: 'send_confirmation', label: 'Enviar confirmación de cita al cliente', description: 'Manda un email con detalles de la cita agendada', default: true },
       { key: 'send_daily_summary', label: 'Enviar resumen diario a las 20:00', description: 'Manda un email al equipo con las métricas del día', default: true },
     ],
   },
@@ -58,22 +58,22 @@ export const INTEGRATIONS_CATALOG: IntegrationDefinition[] = [
   {
     id: 'slack',
     name: 'Slack',
-    description: 'Alertas inmediatas en tu canal de Slack cuando un paciente necesita atención humana urgente o cuando se reserva una nueva cita.',
+    description: 'Alertas inmediatas en tu canal de Slack cuando un cliente necesita atención humana urgente o cuando se reserva una nueva cita.',
     category: 'notificaciones',
     authType: 'WEBHOOK_URL',
     capabilities: [
-      { key: 'notify_handoff', label: 'Avisar cuando se pasa a humano', description: 'Envía alerta con el motivo y datos del paciente', default: true },
+      { key: 'notify_handoff', label: 'Avisar cuando se pasa a humano', description: 'Envía alerta con el motivo y datos del cliente', default: true },
       { key: 'notify_appointment', label: 'Avisar de nueva cita creada', description: 'Notifica en el canal cada vez que se agenda', default: true },
     ],
   },
   {
     id: 'telegram',
     name: 'Telegram (Alertas)',
-    description: 'Alertas internas inmediatas a Telegram cuando un paciente requiere intervención humana (WAITING_HUMAN).',
+    description: 'Alertas internas inmediatas a Telegram cuando un cliente requiere intervención humana (WAITING_HUMAN).',
     category: 'notificaciones',
     authType: 'CUSTOM',
     capabilities: [
-      { key: 'notify_handoff', label: 'Avisar cuando se pasa a humano', description: 'Envía alerta con el motivo, paciente y botón para abrir el panel', default: true },
+      { key: 'notify_handoff', label: 'Avisar cuando se pasa a humano', description: 'Envía alerta con el motivo, cliente y botón para abrir el panel', default: true },
     ],
   },
   {
@@ -94,9 +94,9 @@ export const INTEGRATIONS_CATALOG: IntegrationDefinition[] = [
     category: 'desarrollador',
     authType: 'CUSTOM',
     capabilities: [
-      { key: 'event_conversation_created', label: 'Evento: Conversación nueva', description: 'Se dispara cuando un nuevo paciente escribe', default: true },
+      { key: 'event_conversation_created', label: 'Evento: Conversación nueva', description: 'Se dispara cuando un nuevo cliente escribe', default: true },
       { key: 'event_appointment_booked', label: 'Evento: Cita agendada', description: 'Se dispara al confirmar una cita', default: true },
-      { key: 'event_contact_updated', label: 'Evento: Contacto guardado', description: 'Se dispara al recopilar datos del paciente', default: true },
+      { key: 'event_contact_updated', label: 'Evento: Contacto guardado', description: 'Se dispara al recopilar datos del cliente', default: true },
       { key: 'event_handoff_triggered', label: 'Evento: Derivación a humano', description: 'Se dispara cuando el asistente cede el control', default: true },
     ],
   },

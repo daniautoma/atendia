@@ -1,7 +1,7 @@
 /**
  * Utilidad de Alertas Unidireccionales de Telegram para Atendia.
  *
- * Envía notificaciones internas al administrador cuando un paciente
+ * Envía notificaciones internas al administrador cuando un cliente
  * requiere intervención humana (WAITING_HUMAN).
  *
  * Soporta configuración dual:

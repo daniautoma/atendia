@@ -42,10 +42,10 @@ Este comando levanta de forma coordinada:
 
 Una vez arrancado, entra en [http://localhost:3000](http://localhost:3000) e inicia sesión:
 
-- **Correo**: `admin@atendia.local`
-- **Contraseña**: `admin1234password`
+- **Correo**: `admin@daniautoma.com` (o el configurado en `ADMIN_EMAIL`)
+- **Contraseña**: `admin1234password` (o la configurada en `ADMIN_PASSWORD`)
 
-*(El negocio inicial viene precargado con los datos de la **«Clínica Dental San Salvador»**: 8 servicios odontológicos en USD, 10 preguntas frecuentes y horarios de San Salvador).*
+*(El negocio inicial viene precargado con la identidad oficial de **danIAutoma**: catálogo de servicios en USD, preguntas frecuentes reales y horarios de El Salvador).*
 
 ---
 
@@ -90,4 +90,4 @@ docker compose up -d --build
 - `npm run build`: Validación estricta de compilación y empaquetado Next.js.
 - `npm run prisma:generate`: Regenera los tipos del cliente Prisma.
 - `npm run prisma:push`: Sincroniza cambios del esquema PostgreSQL.
-- `npm run prisma:seed`: Recarga los datos iniciales de la «Clínica Dental San Salvador».
+- `npm run prisma:seed`: Recarga los datos iniciales oficiales de danIAutoma.
